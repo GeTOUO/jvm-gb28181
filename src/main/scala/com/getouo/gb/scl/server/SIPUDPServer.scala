@@ -28,7 +28,8 @@ class SIPUDPServer(configuration: PlatConfiguration, serverHandler: SIPServerHan
       //通过NioDatagramChannel创建Channel，并设置Socket参数支持广播
       //UDP相对于TCP不需要在客户端和服务端建立实际的连接，因此不需要为连接（ChannelPipeline）设置handler
       val b: Bootstrap = new Bootstrap
-      b.group(bossGroup).channel(classOf[NioDatagramChannel]).option[java.lang.Boolean](ChannelOption.SO_BROADCAST, true)
+      b.group(bossGroup).channel(classOf[NioDatagramChannel])
+        .option[java.lang.Boolean](ChannelOption.SO_BROADCAST, true)
         .handler(serverHandler)
 
       val channelFuture: ChannelFuture = b.bind(configuration.getPort).sync()

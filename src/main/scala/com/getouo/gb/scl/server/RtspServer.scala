@@ -42,7 +42,8 @@ class RtspServer extends Runnable {
               .addLast(new RtspHandler) // 上一步将消息解析完成之后, 再交给自定义的处理器
               .addLast(new ReadTimeoutHandler(30)) // idle超时处理
           }
-        }).option(ChannelOption.SO_BACKLOG, 128).childOption(ChannelOption.SO_KEEPALIVE, true)
+        }).option[Integer](ChannelOption.SO_BACKLOG, 128)
+        .childOption[java.lang.Boolean](ChannelOption.SO_KEEPALIVE, true)
 
       val f: ChannelFuture = b.bind(80).sync()
       logger.info("start rtsp server success")
