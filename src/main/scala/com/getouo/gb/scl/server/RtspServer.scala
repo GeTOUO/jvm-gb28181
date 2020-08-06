@@ -12,6 +12,7 @@ import io.netty.channel.nio.NioEventLoopGroup
 import io.netty.channel.socket.SocketChannel
 import io.netty.channel.socket.nio.NioServerSocketChannel
 import io.netty.handler.codec.rtsp.RtspDecoder
+import io.netty.handler.codec.string.{StringDecoder, StringEncoder}
 import io.netty.handler.timeout.ReadTimeoutHandler
 import io.netty.util.internal.logging.{InternalLogger, InternalLoggerFactory}
 
@@ -40,12 +41,14 @@ class RtspServer extends Runnable {
           override def initChannel(ch: SocketChannel): Unit = {
             ch.pipeline.addLast(new RtspDecoder) // 添加netty自带的rtsp消息解析器
               .addLast(new RtspHandler) // 上一步将消息解析完成之后, 再交给自定义的处理器
+              .addLast(new StringDecoder()) // 上一步将消息解析完成之后, 再交给自定义的处理器
+              .addLast(new StringEncoder()) // 上一步将消息解析完成之后, 再交给自定义的处理器
               .addLast(new ReadTimeoutHandler(30)) // idle超时处理
           }
         }).option[Integer](ChannelOption.SO_BACKLOG, 128)
         .childOption[java.lang.Boolean](ChannelOption.SO_KEEPALIVE, true)
 
-      val f: ChannelFuture = b.bind(80).sync()
+      val f: ChannelFuture = b.bind(8550).sync()
       logger.info("start rtsp server success")
       f.channel.closeFuture.sync()
     } catch {
