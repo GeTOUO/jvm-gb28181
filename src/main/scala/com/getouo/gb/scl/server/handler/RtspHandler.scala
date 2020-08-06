@@ -29,7 +29,7 @@ class RtspHandler extends ChannelInboundHandlerAdapter {
         logger.info("req: {}", req)
         logger.info("req.ur: {}", req.uri())
         logger.info("req.headers: {}", req.headers())
-
+        ctx.channel().re
         val CSeq: Int = req.headers().getInt("CSeq")
         methodName.trim.toUpperCase match {
           case "OPTIONS" =>
