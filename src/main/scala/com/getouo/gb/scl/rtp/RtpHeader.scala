@@ -41,6 +41,9 @@ case class RtpHeader(bytes: Array[Byte]) {
 
 object RtpHeader {
 
+  val VERSION = 2
+  val RTP_PAYLOAD_TYPE_H264 = 96
+
   def apply(version: Int, padding: Boolean, extension: Boolean, csrcLen: Int, marker: Boolean, payloadType: Byte, sequenceNumber: Short, timestamp: Int, ssrcIdentifier: Int): RtpHeader = {
     val buffer = ByteBuffer.allocateDirect(12)
     val byte0 = (version.byteValue() << 6) | ((if (padding) 1 else 0).byteValue() << 5) | ((if (extension) 1 else 0).byteValue() << 4) | (csrcLen.byteValue() << 4 >> 4)

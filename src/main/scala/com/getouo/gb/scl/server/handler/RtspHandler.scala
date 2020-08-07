@@ -1,13 +1,12 @@
 package com.getouo.gb.scl.server.handler
 
-import io.netty.channel.{ChannelHandlerContext, ChannelInboundHandlerAdapter}
-import io.netty.handler.codec.http.{DefaultFullHttpResponse, DefaultHttpRequest, FullHttpRequest, FullHttpResponse, HttpContent, HttpHeaderNames, HttpHeaderValues, HttpMethod, HttpRequest, HttpResponseStatus, HttpVersion}
-import io.netty.util.internal.logging.{InternalLogger, InternalLoggerFactory}
+import com.getouo.gb.util.MyTest
 import io.netty.buffer.{ByteBuf, Unpooled, UnpooledByteBufAllocator}
-import io.netty.channel.ChannelFutureListener
-import io.netty.channel.ChannelHandlerContext
+import io.netty.channel.{ChannelFutureListener, ChannelHandlerContext, ChannelInboundHandlerAdapter}
 import io.netty.handler.codec.http.HttpUtil.isKeepAlive
+import io.netty.handler.codec.http._
 import io.netty.util.CharsetUtil
+import io.netty.util.internal.logging.{InternalLogger, InternalLoggerFactory}
 
 class RtspHandler extends ChannelInboundHandlerAdapter {
   protected val logger: InternalLogger = InternalLoggerFactory.getInstance(this.getClass)
@@ -19,6 +18,7 @@ class RtspHandler extends ChannelInboundHandlerAdapter {
     ctx.close()
   }
 
+  private var clientPort = 0;
   override def channelRead(ctx: ChannelHandlerContext, msg: Any): Unit = {
     logger.info("[RTSPHandler]channelRead:  {}", msg.getClass)
     msg match {
@@ -29,21 +29,29 @@ class RtspHandler extends ChannelInboundHandlerAdapter {
         logger.info("req: {}", req)
         logger.info("req.ur: {}", req.uri())
         logger.info("req.headers: {}", req.headers())
-        ctx.channel().re
+//        ctx.channel().re
         val CSeq: Int = req.headers().getInt("CSeq")
         methodName.trim.toUpperCase match {
           case "OPTIONS" =>
             val str = ResponseBuilder.buildOptions(CSeq, Seq("OPTIONS", "DESCRIBE", "SETUP", "TEARDOWN", "PLAY"))
-            ctx.writeAndFlush(ResponseBuilder.toByteBuf(str))
+//            ctx.writeAndFlush(ResponseBuilder.toByteBuf(str))
+            ctx.writeAndFlush(str)
           case "DESCRIBE" =>
             val str = ResponseBuilder.buildDescribe(CSeq)
             ctx.writeAndFlush(ResponseBuilder.toByteBuf(str))
           case "SETUP" =>
-            val str = ResponseBuilder.buildSetup(CSeq, req.headers().get("Transport"), 56400, "66334873")
+            val transport = req.headers().get("Transport")
+            val portStr = transport.split("client_port=")
+            if (portStr.length == 2) {
+              val ports = portStr(1).split("-")
+              if (ports.length == 2) clientPort = ports(0).toInt
+            }
+            val str = ResponseBuilder.buildSetup(CSeq, transport, 56400, "66334873")
             ctx.writeAndFlush(ResponseBuilder.toByteBuf(str))
           case "PLAY" =>
             val str = ResponseBuilder.buildPlay(CSeq, req.headers().get("Session"))
             ctx.writeAndFlush(ResponseBuilder.toByteBuf(str))
+            MyTest.mainStart(clientPort)
           case "TEARDOWN" =>
             val str = ResponseBuilder.buildTeardown(CSeq)
             ctx.writeAndFlush(ResponseBuilder.toByteBuf(str))
