@@ -16,17 +16,21 @@ class H264FileReader(fileName: String, private val ioQueue: ArrayBlockingQueue[H
       var readLen = fis.read(buf)
       while (readLen != -1) {
         splitBuf ++= buf.slice(0, readLen)
-        val tag4Index = H264FileAccessor.startTag4Index(splitBuf)
-        val tag3Index = H264FileAccessor.startTag3Index(splitBuf)
-        val lastStart: Array[Byte] = startContainer.get()
-        if (tag4Index != -1) {
-          if (lastStart != null) addNalu(H264NALU(lastStart.length, splitBuf.slice(0, tag4Index)))
-          splitBuf = splitBuf.drop(tag4Index + 4)
-          startContainer.set(H264FileAccessor.START_TAG4)
-        } else if (tag4Index == -1 && tag3Index != -1) {
-          if (lastStart != null) addNalu(H264NALU(lastStart.length, splitBuf.slice(0, tag3Index)))
-          splitBuf = splitBuf.drop(tag3Index + 3)
-          startContainer.set(H264FileAccessor.START_TAG3)
+        var tag4Index = H264FileAccessor.startTag4Index(splitBuf)
+        var tag3Index = H264FileAccessor.startTag3Index(splitBuf)
+        while (tag4Index != -1 || tag3Index != -1) {
+          val lastStart: Array[Byte] = startContainer.get()
+          if (tag4Index != -1) {
+            if (lastStart != null) addNalu(H264NALU(lastStart.length, splitBuf.slice(0, tag4Index)))
+            splitBuf = splitBuf.drop(tag4Index + 4)
+            startContainer.set(H264FileAccessor.START_TAG4)
+          } else if (tag4Index == -1 && tag3Index != -1) {
+            if (lastStart != null) addNalu(H264NALU(lastStart.length, splitBuf.slice(0, tag3Index)))
+            splitBuf = splitBuf.drop(tag3Index + 3)
+            startContainer.set(H264FileAccessor.START_TAG3)
+          }
+          tag4Index = H264FileAccessor.startTag4Index(splitBuf)
+          tag3Index = H264FileAccessor.startTag3Index(splitBuf)
         }
         readLen = fis.read(buf)
       }

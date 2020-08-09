@@ -1,7 +1,9 @@
 package com.getouo.gb.scl.server.handler
 
+import com.getouo.gb.scl.rtp.H264FileAccessor
 import com.getouo.gb.util.MyTest
 import io.netty.buffer.{ByteBuf, Unpooled, UnpooledByteBufAllocator}
+import io.netty.channel.socket.DatagramPacket
 import io.netty.channel.{ChannelFutureListener, ChannelHandlerContext, ChannelInboundHandlerAdapter}
 import io.netty.handler.codec.http.HttpUtil.isKeepAlive
 import io.netty.handler.codec.http._
@@ -18,7 +20,7 @@ class RtspHandler extends ChannelInboundHandlerAdapter {
     ctx.close()
   }
 
-  private var clientPort = 0;
+  private var clientPort = 0
   override def channelRead(ctx: ChannelHandlerContext, msg: Any): Unit = {
     logger.info("[RTSPHandler]channelRead:  {}", msg.getClass)
     msg match {
@@ -51,7 +53,13 @@ class RtspHandler extends ChannelInboundHandlerAdapter {
           case "PLAY" =>
             val str = ResponseBuilder.buildPlay(CSeq, req.headers().get("Session"))
             ctx.writeAndFlush(ResponseBuilder.toByteBuf(str))
-            MyTest.mainStart(clientPort)
+            val accessor = new H264FileAccessor("E:/DevelopRepository/getouo/jvm-gb28181/src/main/resources/slamtv60.264")
+//            Unpooled
+//            new DatagramPacket(Unpooled.copiedBuffer(
+//              "谚语查询结果："+nextQuote(),CharsetUtil.UTF_8), packet.sender())
+            accessor.subscribe("c", clientPort)
+            new Thread(accessor).start()
+//            MyTest.mainStart(clientPort)
           case "TEARDOWN" =>
             val str = ResponseBuilder.buildTeardown(CSeq)
             ctx.writeAndFlush(ResponseBuilder.toByteBuf(str))
