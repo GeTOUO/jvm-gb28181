@@ -29,13 +29,13 @@ public class NALU_t {
         seqWrite.get(header, 2, 2);
     }
 
-    List<byte[]> toRtpPacket(AtomicInteger seq, int time) {
+    List<byte[]> toRtpPacket(AtomicInteger seq, int nextTime) {
 
         List<byte[]> res = new ArrayList<>();
         byte[] rtpHeaderBytes = new byte[12];
 
         ByteBuffer timeWrite = ByteBuffer.allocate(4);
-        timeWrite.putInt(time);
+        timeWrite.putInt(nextTime);
         timeWrite.position(0);
         timeWrite.get(rtpHeaderBytes, 4, 4);
 
@@ -49,8 +49,8 @@ public class NALU_t {
             byte[] rtpSendBodys = new byte[len + 12];
 
             rtpSendBodys[12] = (byte) (((byte) forbidden_bit) << 7);
-            rtpSendBodys[12] = (byte) (rtpSendBodys[0] | ((byte) (nal_reference_idc >> 5)) << 5);
-            rtpSendBodys[12] = (byte) (rtpSendBodys[0] | ((byte) nal_unit_type));
+            rtpSendBodys[12] = (byte) (rtpSendBodys[12] | ((byte) (nal_reference_idc >> 5)) << 5);
+            rtpSendBodys[12] = (byte) (rtpSendBodys[12] | ((byte) nal_unit_type));
             System.arraycopy(rtpHeaderBytes, 0, rtpSendBodys, 0, 12);//
             System.arraycopy(buf, 1, rtpSendBodys, 13, len - 1);//去掉nalu头的nalu剩余类容写入sendbuf[13]开始的字符串
             res.add(rtpSendBodys);

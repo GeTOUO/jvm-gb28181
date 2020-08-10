@@ -35,37 +35,7 @@ class H264FileAccessor(fileName: String) extends Runnable {
       try {
         val hnalu = ioQueue.take()
         timestamp += timestampIncrement
-        if (hnalu.nalu.length <= H264NALU.DEFAULT_MTU_LEN) {
-          val rtpHeader = RtpHeader.from(RtpHeader.VERSION, false, false, 0,
-            false, RtpHeader.RTP_PAYLOAD_TYPE_H264.byteValue(), sendSeq.incrementAndGet().shortValue(),
-            timestamp, 0x88923423)
-          //          RtpPacket(rtpHeader, hnalu.nalu)
-//          System.err.println(s"rtpHeader.bytes.len = ${rtpHeader.bytes.length}; hnalu.nalu.length= ${hnalu.nalu.length}")
-          val toSend = rtpHeader.bytes ++ hnalu.nalu
-          send(toSend)
-        } else {
-          val noTypeNalus = hnalu.nalu.tail
-          val groupByMTU = noTypeNalus.grouped(H264NALU.DEFAULT_MTU_LEN).toSeq
-          (0 until groupByMTU.length).map(index => {
-            val headerBytes = RtpHeader.from(RtpHeader.VERSION, false, false, 0,
-              marker = if (index == (groupByMTU.length - 1)) true else false,
-              RtpHeader.RTP_PAYLOAD_TYPE_H264.byteValue(), sendSeq.incrementAndGet().shortValue(),
-              timestamp, 0x88923423).bytes
-            //            val fui = (0 | (hnalu.forbiddenBit << 7).byteValue() | (hnalu.nalReferenceIdc << 5).byteValue() | hnalu.nalUnitType).byteValue()
-            val fui = (0 | (hnalu.forbiddenBit << 7).byteValue() | (hnalu.nalReferenceIdc << 5).byteValue() | 28.byteValue()).byteValue()
-
-            val fuh = if (index == 0) {
-              (0 & 0xBF & 0xDF | 0x80 | hnalu.nalUnitType).byteValue() // //E=0, //R=0,//S=1
-            } else if (index == (groupByMTU.length - 1)) {
-              (0 & 0xDF & 0x7F | 0x40 | hnalu.nalUnitType).byteValue() // //R=0, //S=0,//E=1
-            } else {
-              (0 & 0xDF & 0x7F & 0xBF | hnalu.nalUnitType).byteValue() // //R=0, //S=0,//E=0
-            }
-            val toSend: Array[Byte] = headerBytes ++ Array[Byte](fui, fuh) ++ groupByMTU(index)
-            send(toSend)
-
-          })
-        }
+        hnalu.rtpPacket(sendSeq, timestamp).foreach(send)
 //        val packet = packets.take()
 //        observers.values().forEach(s => {
 //          //TODO 推流
@@ -78,13 +48,15 @@ class H264FileAccessor(fileName: String) extends Runnable {
 
   val client: DatagramSocket = new DatagramSocket
 //  private val inetAddress: InetAddress = InetAddress.getByName("192.168.199.237")
-  private val inetAddress: InetAddress = InetAddress.getByName("192.168.2.19")
+  private val inetAddress: InetAddress = InetAddress.getByName("localhost")
 
   private def send(byte: Array[Byte]): Unit = {
-    System.err.println(BytesPrinter.toStr(byte))
+//    System.err.println(BytesPrinter.toStr(byte))
+//    3 + Math.random()
+    Thread.sleep((3 + Math.random()).intValue())
     observers.values().forEach(port => {
       //TODO 推流
-      System.err.println("tuiiliu : " + byte.length)
+//      System.err.println("tuiiliu : " + byte.length)
       val sendPacket = new DatagramPacket(byte, byte.length, inetAddress, port)
       client.send(sendPacket)
     })
@@ -131,5 +103,13 @@ object H264FileAccessor {
     println("53824-53825".split("-")(0))
 
     println(2 >> 6)
+
+
+    println("========================================")
+    val framerate: Float = 25
+    println((90000 / framerate).intValue())
+    println(90000 % framerate)
+
+
   }
 }

@@ -6,11 +6,13 @@ import java.util.concurrent.atomic.AtomicReference
 
 class H264FileReader(fileName: String, private val ioQueue: ArrayBlockingQueue[H264NALU]) extends Runnable {
 
-  private val fis = new FileInputStream(fileName)
+//  private var fis = new FileInputStream(fileName)
+  private var fis: FileInputStream = null
   private val startContainer: AtomicReference[Array[Byte]] = new AtomicReference[Array[Byte]](null)
 
   override def run(): Unit = {
     while (true) {
+      fis = new FileInputStream(fileName)
       var splitBuf = new Array[Byte](0)
       val buf = new Array[Byte](1024 * 8)
       var readLen = fis.read(buf)
@@ -34,6 +36,7 @@ class H264FileReader(fileName: String, private val ioQueue: ArrayBlockingQueue[H
         }
         readLen = fis.read(buf)
       }
+      fis.close()
       val last = startContainer.get()
       if (last != null && !splitBuf.isEmpty) addNalu(H264NALU(last.length, splitBuf))
       startContainer.set(null)

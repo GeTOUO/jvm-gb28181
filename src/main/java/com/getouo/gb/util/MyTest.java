@@ -10,14 +10,14 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class MyTest {
 
 	public static void main(String[] args) throws IOException {
-		mainStart(0);
+		mainStart(0, "E:\\DevelopRepository\\getouo\\jvm-gb28181\\src\\main\\resources/slamtv60.264");
 	}
     // 主函数
-    public static void mainStart(int port) throws IOException {
+    public static void mainStart(int port, String fn) throws IOException {
         //String fileName = "F:/test22.264";
 //        String fileName = "F:/camera.h264";
 //        String fileName = "G:/test.h264";
-        String fileName = "G:/slamtv60.264";
+        String fileName = fn;
         InitSocket(port);
         //ReadFromFile.readFileByBytes(fileName);
         file = new File(fileName);
@@ -361,7 +361,7 @@ public class MyTest {
 
     public static void InitSocket(int p) throws UnknownHostException, SocketException {
         client = new DatagramSocket();
-        addr = InetAddress.getByName("192.168.2.19");
+        addr = InetAddress.getByName("localhost");
 //        port = 56400;
         port = p;
     }
