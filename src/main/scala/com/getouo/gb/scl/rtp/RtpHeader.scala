@@ -27,22 +27,23 @@ case class RtpHeader(bytes: Array[Byte]) {
   private val byte1: Byte = buffer.get() // payloadType:7; marker:1;
 
   val sequenceNumber: Short = buffer.getShort()
+  if (sequenceNumber < 0) throw new RuntimeException("sequenceNumber < 0 error")
   val timestamp: Int = buffer.getInt()
   val ssrcIdentifier: Int = buffer.getInt()
 
   val version: Int = byte0 >> 6
   val padding: Boolean = ByteBitAccessor.hasBit(byte0, RtpHeader.bitByte(5))
   val extension: Boolean = ByteBitAccessor.hasBit(byte0, RtpHeader.bitByte(4))
-  val csrcLen: Int = (byte0 << 4).byteValue() >> 4
+  val csrcLen: Int = ((byte0 << 4).byteValue() & 0xff) >> 4
 
   val marker: Boolean = ByteBitAccessor.hasBit(byte1, RtpHeader.bitByte(7))
-  val payloadType: Int = (byte1 << 1).byteValue() >> 1
+  val payloadType: Int = (0xff & (byte1 << 1).byteValue()) >> 1
 }
 
 object RtpHeader {
 
   val VERSION = 2
-  val RTP_PAYLOAD_TYPE_H264: Byte = 96.byteValue()
+  val RTP_PAYLOAD_TYPE_H264 = 96
 
   def from(version: Int, padding: Boolean, extension: Boolean,
             csrcLen: Int, marker: Boolean, payloadType: Byte,

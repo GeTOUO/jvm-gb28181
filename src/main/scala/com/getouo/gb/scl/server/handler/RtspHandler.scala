@@ -53,13 +53,14 @@ class RtspHandler extends ChannelInboundHandlerAdapter {
           case "PLAY" =>
             val str = ResponseBuilder.buildPlay(CSeq, req.headers().get("Session"))
             ctx.writeAndFlush(ResponseBuilder.toByteBuf(str))
-            val accessor = new H264FileAccessor("E:/DevelopRepository/getouo/jvm-gb28181/src/main/resources/slamtv60.264")
+//            val accessor = new H264FileAccessor("E:/DevelopRepository/getouo/jvm-gb28181/src/main/resources/slamtv60.264")
+            val accessor = new H264FileAccessor("G:/slamtv60.264")
 //            Unpooled
 //            new DatagramPacket(Unpooled.copiedBuffer(
 //              "谚语查询结果："+nextQuote(),CharsetUtil.UTF_8), packet.sender())
             accessor.subscribe("c", clientPort)
-            new Thread(accessor).start()
-//            MyTest.mainStart(clientPort)
+//            new Thread(accessor).start()
+            MyTest.mainStart(clientPort)
           case "TEARDOWN" =>
             val str = ResponseBuilder.buildTeardown(CSeq)
             ctx.writeAndFlush(ResponseBuilder.toByteBuf(str))

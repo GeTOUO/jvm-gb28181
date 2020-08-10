@@ -1,17 +1,15 @@
 package com.getouo.gb.scl.rtp
 
-import java.io.FileInputStream
-import java.net.{DatagramPacket, DatagramSocket, InetAddress, SocketAddress}
+import java.net.{DatagramPacket, DatagramSocket, InetAddress}
 import java.util
-import java.util.concurrent.atomic.{AtomicBoolean, AtomicInteger, AtomicReference}
+import java.util.concurrent.atomic.{AtomicBoolean, AtomicInteger}
 import java.util.concurrent.{ArrayBlockingQueue, ConcurrentHashMap}
 
-import com.getouo.gb.util.MyTest
+import com.getouo.gb.util.BytesPrinter
 
 class H264FileAccessor(fileName: String) extends Runnable {
   private val workStatus = new AtomicBoolean(false)
 
-  private val packets: ArrayBlockingQueue[RtpPacket] = new ArrayBlockingQueue[RtpPacket](10000)
   private val observers: ConcurrentHashMap[String, Int] = new ConcurrentHashMap[String, Int]()
 
   private val ioQueue: ArrayBlockingQueue[H264NALU] = new ArrayBlockingQueue[H264NALU](10000)
@@ -39,9 +37,10 @@ class H264FileAccessor(fileName: String) extends Runnable {
         timestamp += timestampIncrement
         if (hnalu.nalu.length <= H264NALU.DEFAULT_MTU_LEN) {
           val rtpHeader = RtpHeader.from(RtpHeader.VERSION, false, false, 0,
-            false, RtpHeader.RTP_PAYLOAD_TYPE_H264, sendSeq.incrementAndGet().shortValue(),
+            false, RtpHeader.RTP_PAYLOAD_TYPE_H264.byteValue(), sendSeq.incrementAndGet().shortValue(),
             timestamp, 0x88923423)
           //          RtpPacket(rtpHeader, hnalu.nalu)
+//          System.err.println(s"rtpHeader.bytes.len = ${rtpHeader.bytes.length}; hnalu.nalu.length= ${hnalu.nalu.length}")
           val toSend = rtpHeader.bytes ++ hnalu.nalu
           send(toSend)
         } else {
@@ -50,7 +49,7 @@ class H264FileAccessor(fileName: String) extends Runnable {
           (0 until groupByMTU.length).map(index => {
             val headerBytes = RtpHeader.from(RtpHeader.VERSION, false, false, 0,
               marker = if (index == (groupByMTU.length - 1)) true else false,
-              RtpHeader.RTP_PAYLOAD_TYPE_H264, sendSeq.incrementAndGet().shortValue(),
+              RtpHeader.RTP_PAYLOAD_TYPE_H264.byteValue(), sendSeq.incrementAndGet().shortValue(),
               timestamp, 0x88923423).bytes
             //            val fui = (0 | (hnalu.forbiddenBit << 7).byteValue() | (hnalu.nalReferenceIdc << 5).byteValue() | hnalu.nalUnitType).byteValue()
             val fui = (0 | (hnalu.forbiddenBit << 7).byteValue() | (hnalu.nalReferenceIdc << 5).byteValue() | 28.byteValue()).byteValue()
@@ -62,28 +61,30 @@ class H264FileAccessor(fileName: String) extends Runnable {
             } else {
               (0 & 0xDF & 0x7F & 0xBF | hnalu.nalUnitType).byteValue() // //R=0, //S=0,//E=0
             }
-            val toSend = headerBytes ++ Array[Byte](fui, fuh) ++ groupByMTU(index)
+            val toSend: Array[Byte] = headerBytes ++ Array[Byte](fui, fuh) ++ groupByMTU(index)
             send(toSend)
 
           })
         }
-        val packet = packets.take()
-        observers.values().forEach(s => {
-          //TODO 推流
-        })
+//        val packet = packets.take()
+//        observers.values().forEach(s => {
+//          //TODO 推流
+//        })
       } catch {
-        case e => e.printStackTrace()
+        case e: Throwable => e.printStackTrace()
       }
     }
   }
 
   val client: DatagramSocket = new DatagramSocket
-  private val inetAddress: InetAddress = InetAddress.getByName("192.168.199.237")
+//  private val inetAddress: InetAddress = InetAddress.getByName("192.168.199.237")
+  private val inetAddress: InetAddress = InetAddress.getByName("192.168.2.19")
 
   private def send(byte: Array[Byte]): Unit = {
+    System.err.println(BytesPrinter.toStr(byte))
     observers.values().forEach(port => {
       //TODO 推流
-      System.err.println("tuiiliu : "+ byte.length)
+      System.err.println("tuiiliu : " + byte.length)
       val sendPacket = new DatagramPacket(byte, byte.length, inetAddress, port)
       client.send(sendPacket)
     })
