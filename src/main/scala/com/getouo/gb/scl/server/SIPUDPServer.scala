@@ -3,24 +3,13 @@ package com.getouo.gb.scl.server
 import com.getouo.gb.configuration.PlatConfiguration
 import com.getouo.gb.scl.server.handler.SIPServerHandler
 import io.netty.bootstrap.Bootstrap
-import javax.annotation.PostConstruct
-import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.stereotype.Component
-import io.netty.channel.{ChannelFuture, ChannelOption, EventLoopGroup}
 import io.netty.channel.nio.NioEventLoopGroup
 import io.netty.channel.socket.nio.NioDatagramChannel
+import io.netty.channel.{ChannelFuture, ChannelOption, EventLoopGroup}
+import org.springframework.stereotype.Component
 
 @Component
-class SIPUDPServer(configuration: PlatConfiguration, serverHandler: SIPServerHandler) extends Runnable {
-
-  @PostConstruct
-  private def init(): Unit = {
-    // 异步启动netty 不使用异步会阻塞程序
-    val thread: Thread = new Thread(this)
-    thread.setDaemon(true)
-    thread.setName("sip udp server netty thread")
-    thread.start()
-  }
+class SIPUDPServer(configuration: PlatConfiguration, serverHandler: SIPServerHandler) extends RunnableServer {
 
   override def run(): Unit = {
     val bossGroup: EventLoopGroup = new NioEventLoopGroup
@@ -35,7 +24,7 @@ class SIPUDPServer(configuration: PlatConfiguration, serverHandler: SIPServerHan
       val channelFuture: ChannelFuture = b.bind(configuration.getPort).sync()
       serverHandler.setChannelFuture(channelFuture)
 
-      println("sip udp server started")
+      logger.info("sip udp server started")
       channelFuture.channel.closeFuture.sync
     } catch {
       case e: Exception => e.printStackTrace()

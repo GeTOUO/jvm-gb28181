@@ -4,11 +4,12 @@ import java.io.FileInputStream
 import java.util.concurrent.ArrayBlockingQueue
 import java.util.concurrent.atomic.AtomicReference
 
-class H264FileReader(fileName: String, private val ioQueue: ArrayBlockingQueue[H264NALU]) extends Runnable {
+class H264FileReader(fileName: String, consumer: H264NALU => Unit) extends Runnable {
 
 //  private var fis = new FileInputStream(fileName)
   private var fis: FileInputStream = null
   private val startContainer: AtomicReference[Array[Byte]] = new AtomicReference[Array[Byte]](null)
+//  private var consumer: H264NALU => Unit = null
 
   override def run(): Unit = {
     while (true) {
@@ -23,11 +24,11 @@ class H264FileReader(fileName: String, private val ioQueue: ArrayBlockingQueue[H
         while (tag4Index != -1 || tag3Index != -1) {
           val lastStart: Array[Byte] = startContainer.get()
           if (tag4Index != -1) {
-            if (lastStart != null) addNalu(H264NALU(lastStart.length, splitBuf.slice(0, tag4Index)))
+            if (lastStart != null) pop(H264NALU(lastStart.length, splitBuf.slice(0, tag4Index)))
             splitBuf = splitBuf.drop(tag4Index + 4)
             startContainer.set(H264FileAccessor.START_TAG4)
           } else if (tag4Index == -1 && tag3Index != -1) {
-            if (lastStart != null) addNalu(H264NALU(lastStart.length, splitBuf.slice(0, tag3Index)))
+            if (lastStart != null) pop(H264NALU(lastStart.length, splitBuf.slice(0, tag3Index)))
             splitBuf = splitBuf.drop(tag3Index + 3)
             startContainer.set(H264FileAccessor.START_TAG3)
           }
@@ -38,14 +39,17 @@ class H264FileReader(fileName: String, private val ioQueue: ArrayBlockingQueue[H
       }
       fis.close()
       val last = startContainer.get()
-      if (last != null && !splitBuf.isEmpty) addNalu(H264NALU(last.length, splitBuf))
+      if (last != null && !splitBuf.isEmpty) pop(H264NALU(last.length, splitBuf))
       startContainer.set(null)
+      System.err.println("file read finished!")
     }
   }
 
-  private def addNalu(n: H264NALU): Unit = {
+  private def pop(n: H264NALU): Unit = {
     try {
-      ioQueue.add(n)
+      if (consumer != null)
+        consumer.apply(n)
+//      ioQueue.add(n)
     } catch {
       case e: Throwable =>
     }

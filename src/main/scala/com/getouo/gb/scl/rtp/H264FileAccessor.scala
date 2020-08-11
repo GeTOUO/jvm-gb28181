@@ -2,26 +2,26 @@ package com.getouo.gb.scl.rtp
 
 import java.net.{DatagramPacket, DatagramSocket, InetAddress}
 import java.util
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.{AtomicBoolean, AtomicInteger}
-import java.util.concurrent.{ArrayBlockingQueue, ConcurrentHashMap}
 
-import com.getouo.gb.util.BytesPrinter
+import io.netty.buffer.ByteBufAllocator
+import io.netty.channel.Channel
 
 class H264FileAccessor(fileName: String) extends Runnable {
   private val workStatus = new AtomicBoolean(false)
 
   private val observers: ConcurrentHashMap[String, Int] = new ConcurrentHashMap[String, Int]()
+  private var channel: Channel = null
 
-  private val ioQueue: ArrayBlockingQueue[H264NALU] = new ArrayBlockingQueue[H264NALU](10000)
-
-  def popPacket(): RtpPacket = {
-    //    fis.re
-    null
-  }
+//  private val ioQueue: ArrayBlockingQueue[H264NALU] = new ArrayBlockingQueue[H264NALU](10000)
 
   private def startReadStream(): Unit = {
     if (workStatus.compareAndSet(false, true)) {
-      new Thread(new H264FileReader(fileName, ioQueue)).start()
+      new Thread(new H264FileReader(fileName, n => {
+        timestamp += timestampIncrement
+        n.rtpPacket(sendSeq, timestamp).foreach(send)
+      })).start()
     }
   }
 
@@ -31,19 +31,19 @@ class H264FileAccessor(fileName: String) extends Runnable {
   private val timestampIncrement: Int = (90000 / framerate).intValue() //+0.5
   override def run(): Unit = {
     startReadStream()
-    while (true) {
-      try {
-        val hnalu = ioQueue.take()
-        timestamp += timestampIncrement
-        hnalu.rtpPacket(sendSeq, timestamp).foreach(send)
-//        val packet = packets.take()
-//        observers.values().forEach(s => {
-//          //TODO 推流
-//        })
-      } catch {
-        case e: Throwable => e.printStackTrace()
-      }
-    }
+//    while (true) {
+//      try {
+//        val hnalu = ioQueue.take()
+//        timestamp += timestampIncrement
+//        hnalu.rtpPacket(sendSeq, timestamp).foreach(send)
+////        val packet = packets.take()
+////        observers.values().forEach(s => {
+////          //TODO 推流
+////        })
+//      } catch {
+//        case e: Throwable => e.printStackTrace()
+//      }
+//    }
   }
 
   val client: DatagramSocket = new DatagramSocket
@@ -54,6 +54,17 @@ class H264FileAccessor(fileName: String) extends Runnable {
 //    System.err.println(BytesPrinter.toStr(byte))
 //    3 + Math.random()
     Thread.sleep((3 + Math.random()).intValue())
+    if (this.channel != null) {
+      val tcpHeader = new Array[Byte](4)
+      tcpHeader(0) = '$'
+      tcpHeader(1) = 123
+      tcpHeader(2) = ((byte.length >> 8) & 0x0f).byteValue()
+      tcpHeader(3) = (byte.length & 0xff).byteValue()
+      val tcpPacket = tcpHeader ++ byte
+      val buf = ByteBufAllocator.DEFAULT.directBuffer(tcpPacket.length)
+      buf.writeBytes(tcpPacket)
+      this.channel.writeAndFlush(buf)
+    }
     observers.values().forEach(port => {
       //TODO 推流
 //      System.err.println("tuiiliu : " + byte.length)
@@ -63,6 +74,7 @@ class H264FileAccessor(fileName: String) extends Runnable {
   }
 
   def subscribe(actor: String, port: Int): Unit = observers.put(actor, port)
+  def subscribeTCP(channel: Channel): Unit = this.channel = channel
 
   def unSubscribe(actor: String): Unit = observers.remove(actor)
 }

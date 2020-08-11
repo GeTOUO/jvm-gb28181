@@ -48,7 +48,6 @@ case class H264NALU(startCodeLen: Int, nalu: Array[Byte]) {
 
   private def multipleRtpPacket(seq: AtomicInteger, nextTime: Int): Seq[Array[Byte]] = {
 
-    System.err.println("大帧:" + nalu.length)
     val groupedBytes = nalu.tail.grouped(1400).toSeq
     groupedBytes.indices.collect { case i => (i, groupedBytes(i)) }.map { case (index, data) => {
       val rtpHeaderBytes = new Array[Byte](14)

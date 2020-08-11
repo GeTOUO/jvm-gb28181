@@ -1,10 +1,13 @@
 package com.getouo.gb.scl.server.handler
 
-import com.getouo.gb.scl.rtp.H264FileAccessor
-import com.getouo.gb.util.MyTest
+import java.net.InetSocketAddress
+import java.nio.charset.Charset
+import java.util.concurrent.atomic.AtomicBoolean
+
+import com.getouo.gb.scl.rtp.{H264FileAccessor, SDPInfoBuilder}
+import com.getouo.gb.scl.server.RtpAndRtcpServerGroup
 import io.netty.buffer.{ByteBuf, Unpooled, UnpooledByteBufAllocator}
-import io.netty.channel.socket.DatagramPacket
-import io.netty.channel.{ChannelFutureListener, ChannelHandlerContext, ChannelInboundHandlerAdapter}
+import io.netty.channel.{Channel, ChannelFutureListener, ChannelHandlerContext, ChannelInboundHandlerAdapter}
 import io.netty.handler.codec.http.HttpUtil.isKeepAlive
 import io.netty.handler.codec.http._
 import io.netty.util.CharsetUtil
@@ -13,73 +16,81 @@ import io.netty.util.internal.logging.{InternalLogger, InternalLoggerFactory}
 class RtspHandler extends ChannelInboundHandlerAdapter {
   protected val logger: InternalLogger = InternalLoggerFactory.getInstance(this.getClass)
 
-  override def channelActive(ctx: ChannelHandlerContext): Unit = logger.info("channelActive: {}", ctx)
+  val isStart = new AtomicBoolean(false)
+
+  override def channelActive(ctx: ChannelHandlerContext): Unit = {
+    logger.info("channelActive: {}", ctx)
+//    if (!ctx.channel().remoteAddress().asInstanceOf[InetSocketAddress].getAddress.getHostAddress.contains("192.168.2.19")) {
+//      ResponseBuilder.accessor.subscribeTCP(ctx.channel())
+//    }
+    if (isStart.compareAndSet(false, true)) {
+      new Thread(ResponseBuilder.accessor).start()
+    }
+  }
 
   override def exceptionCaught(ctx: ChannelHandlerContext, cause: Throwable): Unit = {
     logger.info("exceptionCaught: {}", cause)
     ctx.close()
   }
 
-  private var clientPort = 0
+//  private var clientPort = 0
   override def channelRead(ctx: ChannelHandlerContext, msg: Any): Unit = {
     logger.info("[RTSPHandler]channelRead:  {}", msg.getClass)
     msg match {
       case req: DefaultHttpRequest =>
-        val method: HttpMethod = req.method()
-        val methodName: String = method.name()
-        logger.info("method: {}", methodName)
-        logger.info("req: {}", req)
-        logger.info("req.ur: {}", req.uri())
-        logger.info("req.headers: {}", req.headers())
-//        ctx.channel().re
-        val CSeq: Int = req.headers().getInt("CSeq")
-        methodName.trim.toUpperCase match {
-          case "OPTIONS" =>
-            val str = ResponseBuilder.buildOptions(CSeq, Seq("OPTIONS", "DESCRIBE", "SETUP", "TEARDOWN", "PLAY"))
+        ResponseBuilder.dispatcherRequest(ctx.channel(), req)
+//
+//        val method: HttpMethod = req.method()
+//        val methodName: String = method.name()
+//        logger.info("method: {}", methodName)
+//        logger.info("req: {}", req)
+//        logger.info("req.ur: {}", req.uri())
+//        logger.info("req.headers: {}", req.headers())
+////        ctx.channel().re
+//        val CSeq: Int = req.headers().getInt("CSeq")
+//        methodName.trim.toUpperCase match {
+//          case "OPTIONS" =>
+//            val str = ResponseBuilder.buildOptionsResp(CSeq, Seq("OPTIONS", "DESCRIBE", "SETUP", "TEARDOWN", "PLAY"))
+////            ctx.writeAndFlush(ResponseBuilder.toByteBuf(str))
+//            ctx.writeAndFlush(str)
+//          case "DESCRIBE" =>
+//            val str = ResponseBuilder.buildDescribeResp(CSeq)
 //            ctx.writeAndFlush(ResponseBuilder.toByteBuf(str))
-            ctx.writeAndFlush(str)
-          case "DESCRIBE" =>
-            val str = ResponseBuilder.buildDescribe(CSeq)
-            ctx.writeAndFlush(ResponseBuilder.toByteBuf(str))
-          case "SETUP" =>
-            val transport = req.headers().get("Transport")
-            val portStr = transport.split("client_port=")
-            if (portStr.length == 2) {
-              val ports = portStr(1).split("-")
-              if (ports.length == 2) clientPort = ports(0).toInt
-            }
-            val str = ResponseBuilder.buildSetup(CSeq, transport, 56400, "66334873")
-            ctx.writeAndFlush(ResponseBuilder.toByteBuf(str))
-          case "PLAY" =>
-            val str = ResponseBuilder.buildPlay(CSeq, req.headers().get("Session"))
-            ctx.writeAndFlush(ResponseBuilder.toByteBuf(str))
-//            val accessor = new H264FileAccessor("E:/DevelopRepository/getouo/jvm-gb28181/src/main/resources/slamtv60.264")
-//            val accessor = new H264FileAccessor("F:\\h264file/nature_704x576_25Hz_1500kbits.h264")
-            val accessor = new H264FileAccessor("F:\\h264file/test.h264")
-//            val accessor = new H264FileAccessor("F:\\h264file/src13_hrc7_525_420_2.264")
-//            val accessor = new H264FileAccessor("G:/slamtv60.264")
-//            Unpooled
-//            new DatagramPacket(Unpooled.copiedBuffer(
-//              "谚语查询结果："+nextQuote(),CharsetUtil.UTF_8), packet.sender())
-            accessor.subscribe("c", clientPort)
-            new Thread(accessor).start()
-//            MyTest.mainStart(clientPort, "F:\\h264file/nature_704x576_25Hz_1500kbits.h264")
-          case "TEARDOWN" =>
-            val str = ResponseBuilder.buildTeardown(CSeq)
-            ctx.writeAndFlush(ResponseBuilder.toByteBuf(str))
-          case _ =>
-        }
+//          case "SETUP" =>
+//            val transport = req.headers().get("Transport")
+//            val portStr = transport.split("client_port=")
+//            if (portStr.length == 2) {
+//              val ports = portStr(1).split("-")
+//              if (ports.length == 2) clientPort = ports(0).toInt
+//            }
+//            val str = ResponseBuilder.buildSetupResp(CSeq, transport, 56400, "66334873")
+//            ctx.writeAndFlush(ResponseBuilder.toByteBuf(str))
+//          case "PLAY" =>
+//            val str = ResponseBuilder.buildPlayResp(CSeq, req.headers().get("Session"))
+//            ctx.writeAndFlush(ResponseBuilder.toByteBuf(str))
+////            val accessor = new H264FileAccessor("E:/DevelopRepository/getouo/jvm-gb28181/src/main/resources/slamtv60.264")
+////            val accessor = new H264FileAccessor("F:\\h264file/nature_704x576_25Hz_1500kbits.h264")
+////            val accessor = new H264FileAccessor("F:\\h264file/src13_hrc7_525_420_2.264")
+////            val accessor = new H264FileAccessor("G:/slamtv60.264")
+////            Unpooled
+////            new DatagramPacket(Unpooled.copiedBuffer(
+////              "谚语查询结果："+nextQuote(),CharsetUtil.UTF_8), packet.sender())
+////            val accessor = new H264FileAccessor("/slamtv60.264")
+////            accessor.subscribe("c", clientPort)
+////            new Thread(accessor).start()
+////            MyTest.mainStart(clientPort, "F:\\h264file/nature_704x576_25Hz_1500kbits.h264")
+//          case "TEARDOWN" =>
+//            val str = ResponseBuilder.buildTeardown(CSeq)
+//            ctx.writeAndFlush(ResponseBuilder.toByteBuf(str))
+//          case _ =>
+//        }
 
-        /** 以下就是具体消息的处理, 需要开发者自己实现 */
-        if (methodName.equalsIgnoreCase("OPTIONS") ||
-          methodName.equalsIgnoreCase("DESCRIBE")) {
-        } else {
-
-        }
       case content: HttpContent =>
         logger.warn("HttpContent=" + content)
         if (content.content().isReadable()) {
           /** 此时, 才表示HttpContent是有内容的, 否则,它是空的, 不需要处理 */
+          logger.error(content.content().toString(Charset.defaultCharset()))
+
         }
       case _ =>
     }
@@ -110,6 +121,10 @@ class ResponseBuilder(CSeq: Int) {
 
 object ResponseBuilder {
 
+  val accessor = new H264FileAccessor("/slamtv60.264")
+
+  var clientPort: Int = 0
+  val server = new RtpAndRtcpServerGroup(23456)
   def toByteBuf(resp: String): ByteBuf = {
     val bytes = resp.getBytes("UTF-8")
     val byteBuf = UnpooledByteBufAllocator.DEFAULT.buffer(bytes.length)
@@ -117,7 +132,43 @@ object ResponseBuilder {
     byteBuf
   }
 
-  def buildOptions(CSeq: Int, methods: Seq[String]): String = {
+  def dispatcherRequest(channel: Channel, req: DefaultHttpRequest): Unit = {
+    req.method().name().trim.toUpperCase match {
+      case "OPTIONS" => execOptions(channel, req)
+      case "DESCRIBE" => execDescribe(channel, req)
+      case "SETUP" => execSetup(channel, req)
+      case "PLAY" => execPlay(channel, req)
+      case "TEARDOWN" => channel.writeAndFlush(buildTeardownResp(req.headers().getInt("CSeq")))
+    }
+  }
+
+  def execOptions(channel: Channel, req: DefaultHttpRequest): Unit = {
+    val reqSeq = req.headers().getInt("CSeq")
+    channel.writeAndFlush(buildOptionsResp(reqSeq))
+  }
+
+  def execDescribe(channel: Channel, req: DefaultHttpRequest): Unit = {
+    val reqSeq = req.headers().getInt("CSeq")
+    channel.writeAndFlush(buildDescribeResp(reqSeq, channel.localAddress().asInstanceOf[InetSocketAddress].getAddress.getHostAddress))
+  }
+
+  def execSetup(channel: Channel, req: DefaultHttpRequest): Unit = {
+    val reqSeq = req.headers().getInt("CSeq")
+    val transport = req.headers().get("Transport")
+    val portStr = transport.split("client_port=")
+    if (portStr.length == 2) {
+      val ports = portStr(1).split("-")
+      if (ports.length == 2) clientPort = ports(0).toInt
+    }
+    channel.writeAndFlush(buildSetupResp(reqSeq, transport, server.rtpPort, "66334873"))
+  }
+
+  def execPlay(channel: Channel, req: DefaultHttpRequest): Unit = {
+    accessor.subscribe("c", clientPort)
+    channel.writeAndFlush(buildPlayResp(req.headers().getInt("CSeq"), req.headers().get("Session")))
+  }
+
+  def buildOptionsResp(CSeq: Int, methods: Seq[String] = Seq("OPTIONS", "DESCRIBE", "SETUP", "TEARDOWN", "PLAY")): String = {
     val ms = if (methods.size < 1) methods.headOption.getOrElse("") else methods.reduce((a, b) => a + ", " + b)
     val s =
       s"""
@@ -129,7 +180,20 @@ object ResponseBuilder {
     s
   }
 
-  def buildSetup(CSeq: Int, transport: String, serverPort: Int, session: String): String = {
+  def buildDescribeResp(CSeq: Int, localIp: String): String = {
+    s"""
+       |RTSP/1.0 200 OK
+       |CSeq: ${CSeq}
+       |Content-length: 146
+       |Content-type: application/sdp
+       |
+       |
+       |${SDPInfoBuilder.build(localIp)}
+       |""".stripMargin
+  }
+
+
+  def buildSetupResp(CSeq: Int, transport: String, serverPort: Int, session: String): String = {
     s"""
        |RTSP/1.0 200 OK
        |CSeq: ${CSeq}
@@ -139,26 +203,7 @@ object ResponseBuilder {
        |""".stripMargin
   }
 
-  def buildDescribe(CSeq: Int): String = {
-    s"""
-       |RTSP/1.0 200 OK
-       |CSeq: ${CSeq}
-       |Content-length: 146
-       |Content-type: application/sdp
-       |
-       |
-       |v=0
-       |o=- 91565340853 1 in IP4 192.168.31.115
-       |t=0 0
-       |a=contol:*
-       |m=video 0 RTP/AVP 96
-       |a=rtpmap:96 H264/90000
-       |a=framerate:25
-       |a=control:track0
-       |""".stripMargin
-  }
-
-  def buildPlay(CSeq: Int, session: String): String = {
+  def buildPlayResp(CSeq: Int, session: String): String = {
     s"""
        |RTSP/1.0 200 OK
        |CSeq: ${CSeq}
@@ -168,7 +213,7 @@ object ResponseBuilder {
        |""".stripMargin
   }
 
-  def buildTeardown(CSeq: Int): String = {
+  def buildTeardownResp(CSeq: Int): String = {
     s"""
        |RTSP/1.0 200 OK
        |CSeq: ${CSeq}

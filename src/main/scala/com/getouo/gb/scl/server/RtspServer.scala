@@ -1,36 +1,23 @@
 package com.getouo.gb.scl.server
 
 import com.getouo.gb.scl.server.handler.RtspHandler
-import javax.annotation.PostConstruct
-import org.springframework.stereotype.Component
 import io.netty.bootstrap.ServerBootstrap
-import io.netty.channel.ChannelFuture
-import io.netty.channel.ChannelInitializer
-import io.netty.channel.ChannelOption
-import io.netty.channel.EventLoopGroup
 import io.netty.channel.nio.NioEventLoopGroup
 import io.netty.channel.socket.SocketChannel
 import io.netty.channel.socket.nio.NioServerSocketChannel
+import io.netty.channel.{ChannelFuture, ChannelInitializer, ChannelOption, EventLoopGroup}
 import io.netty.handler.codec.rtsp.RtspDecoder
 import io.netty.handler.codec.string.{StringDecoder, StringEncoder}
-import io.netty.handler.timeout.ReadTimeoutHandler
 import io.netty.util.internal.logging.{InternalLogger, InternalLoggerFactory}
+import org.springframework.stereotype.Component
 
+/**
+ * 负责处理服务器与客户端之间的请求与响应
+ */
 @Component
-class RtspServer extends Runnable {
-
-  protected val logger: InternalLogger = InternalLoggerFactory.getInstance(this.getClass)
-
-  @PostConstruct
-  private def init(): Unit = {
-    val thread: Thread = new Thread(this)
-    thread.setDaemon(true)
-    thread.setName("sip udp server netty thread")
-    thread.start()
-  }
+class RtspServer extends RunnableServer {
 
   override def run(): Unit = {
-
     val bossGroup: EventLoopGroup = new NioEventLoopGroup
     val workerGroup: EventLoopGroup = new NioEventLoopGroup
     try {

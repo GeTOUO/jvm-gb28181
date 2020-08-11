@@ -10,7 +10,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class MyTest {
 
 	public static void main(String[] args) throws IOException {
-		mainStart(0, "E:\\DevelopRepository\\getouo\\jvm-gb28181\\src\\main\\resources/slamtv60.264");
+		mainStart(0, "/slamtv60.264");
 	}
     // 主函数
     public static void mainStart(int port, String fn) throws IOException {
