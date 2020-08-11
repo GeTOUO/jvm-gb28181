@@ -2,8 +2,10 @@ package com.getouo.gb.scl.server.handler
 
 import java.net.InetSocketAddress
 import java.nio.charset.Charset
+import java.util
 import java.util.concurrent.atomic.AtomicBoolean
 
+import com.getouo.gb.scl
 import com.getouo.gb.scl.rtp.{H264FileAccessor, SDPInfoBuilder}
 import com.getouo.gb.scl.server.RtpAndRtcpServerGroup
 import io.netty.buffer.{ByteBuf, Unpooled, UnpooledByteBufAllocator}
@@ -13,19 +15,16 @@ import io.netty.handler.codec.http._
 import io.netty.util.CharsetUtil
 import io.netty.util.internal.logging.{InternalLogger, InternalLoggerFactory}
 
+import scala.util.matching.Regex
+
 class RtspHandler extends ChannelInboundHandlerAdapter {
   protected val logger: InternalLogger = InternalLoggerFactory.getInstance(this.getClass)
-
-  val isStart = new AtomicBoolean(false)
 
   override def channelActive(ctx: ChannelHandlerContext): Unit = {
     logger.info("channelActive: {}", ctx)
 //    if (!ctx.channel().remoteAddress().asInstanceOf[InetSocketAddress].getAddress.getHostAddress.contains("192.168.2.19")) {
 //      ResponseBuilder.accessor.subscribeTCP(ctx.channel())
 //    }
-    if (isStart.compareAndSet(false, true)) {
-      new Thread(ResponseBuilder.accessor).start()
-    }
   }
 
   override def exceptionCaught(ctx: ChannelHandlerContext, cause: Throwable): Unit = {
@@ -38,7 +37,7 @@ class RtspHandler extends ChannelInboundHandlerAdapter {
     logger.info("[RTSPHandler]channelRead:  {}", msg.getClass)
     msg match {
       case req: DefaultHttpRequest =>
-        ResponseBuilder.dispatcherRequest(ctx.channel(), req)
+        RequestHandler.dispatcherRequest(ctx.channel(), req)
 //
 //        val method: HttpMethod = req.method()
 //        val methodName: String = method.name()
@@ -113,15 +112,17 @@ class RtspHandler extends ChannelInboundHandlerAdapter {
 case class Content(uri: String, cseq: Int, content: String)
 
 
-class ResponseBuilder(CSeq: Int) {
+class RequestHandler(CSeq: Int) {
   var title: Option[String] = _
   val headers: collection.mutable.Map[String, Any] = new collection.mutable.HashMap[String, Any]()
 
 }
 
-object ResponseBuilder {
+object RequestHandler {
+  val isStart = new AtomicBoolean(false)
 
-  val accessor = new H264FileAccessor("/slamtv60.264")
+  protected val logger: InternalLogger = InternalLoggerFactory.getInstance(this.getClass)
+  val accessor = new H264FileAccessor("src/main/resources/slamtv60.264")
 
   var clientPort: Int = 0
   val server = new RtpAndRtcpServerGroup(23456)
@@ -144,27 +145,35 @@ object ResponseBuilder {
 
   def execOptions(channel: Channel, req: DefaultHttpRequest): Unit = {
     val reqSeq = req.headers().getInt("CSeq")
+    logger.info(s"request options: CSeq=${reqSeq}, request=${req}")
     channel.writeAndFlush(buildOptionsResp(reqSeq))
   }
 
   def execDescribe(channel: Channel, req: DefaultHttpRequest): Unit = {
     val reqSeq = req.headers().getInt("CSeq")
-    channel.writeAndFlush(buildDescribeResp(reqSeq, channel.localAddress().asInstanceOf[InetSocketAddress].getAddress.getHostAddress))
+    logger.info(s"request describe: CSeq=${reqSeq}, request=${req}")
+    val str = buildDescribeResp(reqSeq, channel.localAddress().asInstanceOf[InetSocketAddress].getAddress.getHostAddress)
+    logger.error(s"response describe: CSeq=${reqSeq}, response=${str}")
+    channel.writeAndFlush(str)
   }
 
   def execSetup(channel: Channel, req: DefaultHttpRequest): Unit = {
     val reqSeq = req.headers().getInt("CSeq")
+
     val transport = req.headers().get("Transport")
-    val portStr = transport.split("client_port=")
-    if (portStr.length == 2) {
-      val ports = portStr(1).split("-")
-      if (ports.length == 2) clientPort = ports(0).toInt
-    }
+
+    clientPort = scl.extractClientTransport(transport)
+    logger.info(s"request setup: CSeq=${reqSeq}, request=${req}")
     channel.writeAndFlush(buildSetupResp(reqSeq, transport, server.rtpPort, "66334873"))
+//    channel.writeAndFlush(buildSetupResp(reqSeq, transport, 56400, "66334873"))
   }
 
   def execPlay(channel: Channel, req: DefaultHttpRequest): Unit = {
     accessor.subscribe("c", clientPort)
+    if (isStart.compareAndSet(false, true)) {
+      new Thread(RequestHandler.accessor).start()
+    }
+    logger.info(s"request play: CSeq=${req.headers().getInt("CSeq")}, request=${req}")
     channel.writeAndFlush(buildPlayResp(req.headers().getInt("CSeq"), req.headers().get("Session")))
   }
 
@@ -181,14 +190,14 @@ object ResponseBuilder {
   }
 
   def buildDescribeResp(CSeq: Int, localIp: String): String = {
+    val body = SDPInfoBuilder.build(localIp)
     s"""
        |RTSP/1.0 200 OK
        |CSeq: ${CSeq}
-       |Content-length: 146
+       |Content-length: ${body.length}
        |Content-type: application/sdp
        |
-       |
-       |${SDPInfoBuilder.build(localIp)}
+       |${body}
        |""".stripMargin
   }
 

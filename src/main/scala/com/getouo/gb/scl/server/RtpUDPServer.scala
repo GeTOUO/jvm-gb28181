@@ -21,12 +21,13 @@ class RtpUDPServer(port: Int) extends RunnableServer {
     val bossGroup: EventLoopGroup = new NioEventLoopGroup
     try {
       val b: Bootstrap = new Bootstrap()
-      b.group(bossGroup).channel(classOf[NioDatagramChannel]).option[java.lang.Boolean](ChannelOption.SO_BROADCAST, true)
+      b.group(bossGroup).channel(classOf[NioDatagramChannel])
+        .option[java.lang.Boolean](ChannelOption.SO_BROADCAST, true)
         .handler(new SimpleChannelInboundHandler[DatagramPacket]() {
           override def channelRead0(channelHandlerContext: ChannelHandlerContext, i: DatagramPacket): Unit = {
             println("rtcp server 收到:" + i.content().isReadable)
           }
-        }).option[Integer](ChannelOption.SO_BACKLOG, 128)
+        })
 
       logger.info("ready start rtp server")
       val channelFuture: ChannelFuture = b.bind(port).sync()

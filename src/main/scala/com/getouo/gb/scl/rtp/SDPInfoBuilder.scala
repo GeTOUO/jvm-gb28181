@@ -59,7 +59,6 @@ object SDPInfoBuilder {
     s"""
        |v=0
        |o=- ${System.currentTimeMillis()} 1 IN IP4 ${localIp}
-       |s=CounterPath X-Lite 3.0
        |c=IN IP4 218.107.241.235
        |t=0 0
        |a=control:*
