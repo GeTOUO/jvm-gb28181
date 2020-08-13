@@ -1,11 +1,16 @@
 package com.getouo.gb.scl.io
 
+import com.getouo.gb.scl.util.Observer
+
+import scala.util.Try
+
 /**
  * 资源
+ *
  * @tparam S
  */
 sealed trait Source[S <: ISourceData] {
-  def produce(): S
+  def load(): Unit
 }
 
 /**
@@ -21,5 +26,11 @@ trait UnActiveSource[S <: ISourceData] extends Source[S] {
  * @tparam S
  */
 trait ActiveSource[S <: ISourceData] extends Source[S] {
-  def onProduced(source: S): Unit
+
+  private var obs: Observer[S] = null
+  def registerObserver(ob: Observer[S]): Unit = obs = ob
+
+  protected final def onProduced(source: S): Unit =
+    if (obs != null) Try(obs.onNext(source))
+
 }

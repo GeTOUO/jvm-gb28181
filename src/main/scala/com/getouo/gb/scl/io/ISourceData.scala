@@ -115,17 +115,17 @@ case class H264NaluData(startCodeLen: Int, nalu: Array[Byte]) extends H264Source
   }
 
   private def writeSeq(header: Array[Byte], seq: Int): Unit = {
-    H264NaluData.seqIOBuffer.position(0)
-    H264NaluData.seqIOBuffer.putInt(seq)
-    H264NaluData.seqIOBuffer.position(2)
-    H264NaluData.seqIOBuffer.get(header, 2, 2)
+    val seqBuffer = ByteBuffer.allocate(4)
+    seqBuffer.putInt(seq)
+    seqBuffer.position(2)
+    seqBuffer.get(header, 2, 2)
   }
 }
 object H264NaluData {
   val DEFAULT_MTU_LEN = 1400
   val FUIndicatorType = 28
 
-  val seqIOBuffer: ByteBuffer = ByteBuffer.allocateDirect(4)
+//  val seqIOBuffer: ByteBuffer = ByteBuffer.allocateDirect(4)
   def of(startLen: Int, nalu: Array[Byte]): UnsafeNaluData = {
     if (nalu.length <= 0) {
       EmptyNaluData(startLen)
@@ -133,4 +133,4 @@ object H264NaluData {
   }
 }
 
-case class EndSymbol() extends EndSymbolData with H264SourceData
+case object EndSymbol extends EndSymbolData with H264SourceData

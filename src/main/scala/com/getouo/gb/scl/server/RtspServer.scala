@@ -8,7 +8,6 @@ import io.netty.channel.socket.nio.NioServerSocketChannel
 import io.netty.channel.{ChannelFuture, ChannelInitializer, ChannelOption, EventLoopGroup}
 import io.netty.handler.codec.rtsp.RtspDecoder
 import io.netty.handler.codec.string.{StringDecoder, StringEncoder}
-import io.netty.util.internal.logging.{InternalLogger, InternalLoggerFactory}
 import org.springframework.stereotype.Component
 
 /**

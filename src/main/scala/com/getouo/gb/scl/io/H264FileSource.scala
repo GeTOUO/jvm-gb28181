@@ -9,10 +9,10 @@ import com.getouo.gb.scl.util.H264NALUFramer.StepInfo
 import scala.util.Try
 
 @throws[FileNotFoundException]
-class H264FileSource(h264videoFileName: String, accFileName: Option[String]) extends UnActiveSource[H264SourceData] {
+class H264FileSource(h264videoFileName: String, accFileName: Option[String] = None) extends UnActiveSource[H264SourceData] {
 
-  private var fisSource: SingleFileSource = new SingleFileSource(h264videoFileName)
-  private var accFis: Option[FileInputStream] = accFileName.map(new FileInputStream(_))
+  private val fisSource: SingleFileSource = new SingleFileSource(h264videoFileName)
+  private var accFis: Option[FileInputStream] = _
 
   //
   private var lastStartLen: Int = -1
@@ -29,7 +29,7 @@ class H264FileSource(h264videoFileName: String, accFileName: Option[String]) ext
   }
 
   override def produce(): H264SourceData = {
-    if (readFinished.get()) EndSymbol()
+    if (readFinished.get()) EndSymbol
     else atLeastOne()
   }
 
@@ -65,7 +65,7 @@ class H264FileSource(h264videoFileName: String, accFileName: Option[String]) ext
   private def onEnd(): H264SourceData = {
     if (this.lastStartLen == -1) {
       this.readFinished.set(true);
-      EndSymbol()
+      EndSymbol
     } else {
       readFinished.set(true)
       val res = H264NaluData(this.lastStartLen, naluBuf)
@@ -74,13 +74,18 @@ class H264FileSource(h264videoFileName: String, accFileName: Option[String]) ext
       res
     }
   }
+
+  override def load(): Unit = {
+    fisSource.load()
+    accFis = accFileName.map(new FileInputStream(_))
+  }
 }
 
 object Hal {
   def main(args: Array[String]): Unit = {
     val source = new H264FileSource("src/main/resources/slamtv60.264", None)
     var data = source.produce()
-    while (data != EndSymbol()) {
+    while (data != EndSymbol) {
       println(data)
       data = source.produce()
     }

@@ -2,20 +2,19 @@ package com.getouo.gb.scl.server.handler
 
 import java.net.InetSocketAddress
 import java.nio.charset.Charset
-import java.util
 import java.util.concurrent.atomic.AtomicBoolean
 
 import com.getouo.gb.scl
-import com.getouo.gb.scl.rtp.{H264FileAccessor, SDPInfoBuilder}
+import com.getouo.gb.scl.io.H264FileSource
+import com.getouo.gb.scl.rtp.{H264RtpConsumer, SDPInfoBuilder}
 import com.getouo.gb.scl.server.RtpAndRtcpServerGroup
+import com.getouo.gb.scl.stream.{FileSourceId, H264ConsumptionPipeline, H264PlayStream, PlayStream}
 import io.netty.buffer.{ByteBuf, Unpooled, UnpooledByteBufAllocator}
 import io.netty.channel.{Channel, ChannelFutureListener, ChannelHandlerContext, ChannelInboundHandlerAdapter}
 import io.netty.handler.codec.http.HttpUtil.isKeepAlive
 import io.netty.handler.codec.http._
 import io.netty.util.CharsetUtil
 import io.netty.util.internal.logging.{InternalLogger, InternalLoggerFactory}
-
-import scala.util.matching.Regex
 
 class RtspHandler extends ChannelInboundHandlerAdapter {
   protected val logger: InternalLogger = InternalLoggerFactory.getInstance(this.getClass)
@@ -122,7 +121,7 @@ object RequestHandler {
   val isStart = new AtomicBoolean(false)
 
   protected val logger: InternalLogger = InternalLoggerFactory.getInstance(this.getClass)
-  val accessor = new H264FileAccessor("src/main/resources/slamtv60.264")
+//  val accessor = new H264FileAccessor("src/main/resources/slamtv60.264")
 
   var clientPort: Int = 0
   val server = new RtpAndRtcpServerGroup(23456)
@@ -153,7 +152,7 @@ object RequestHandler {
     val reqSeq = req.headers().getInt("CSeq")
     logger.info(s"request describe: CSeq=${reqSeq}, request=${req}")
     val str = buildDescribeResp(reqSeq, channel.localAddress().asInstanceOf[InetSocketAddress].getAddress.getHostAddress)
-    logger.error(s"response describe: CSeq=${reqSeq}, response=${str}")
+    logger.info(s"response describe: CSeq=${reqSeq}, response=${str}")
     channel.writeAndFlush(str)
   }
 
@@ -161,20 +160,29 @@ object RequestHandler {
     val reqSeq = req.headers().getInt("CSeq")
 
     val transport = req.headers().get("Transport")
-
     clientPort = scl.extractClientTransport(transport)
-    logger.info(s"request setup: CSeq=${reqSeq}, request=${req}")
+    logger.info(s"request setup: CSeq=${reqSeq}, request=$req")
     channel.writeAndFlush(buildSetupResp(reqSeq, transport, server.rtpPort, "66334873"))
 //    channel.writeAndFlush(buildSetupResp(reqSeq, transport, 56400, "66334873"))
   }
 
   def execPlay(channel: Channel, req: DefaultHttpRequest): Unit = {
-    accessor.subscribe("c", clientPort)
-    if (isStart.compareAndSet(false, true)) {
-      new Thread(RequestHandler.accessor).start()
-    }
+
+//    accessor.subscribe("c", clientPort)
+//    if (isStart.compareAndSet(false, true)) {
+//      new Thread(RequestHandler.accessor).start()
+//    }
     logger.info(s"request play: CSeq=${req.headers().getInt("CSeq")}, request=${req}")
     channel.writeAndFlush(buildPlayResp(req.headers().getInt("CSeq"), req.headers().get("Session")))
+
+    import scala.concurrent.ExecutionContext.Implicits.global
+
+    val ps: H264PlayStream = H264PlayStream.getOrElseUpdateLocalFileH264Stream(FileSourceId("src/main/resources/slamtv60.264", System.currentTimeMillis()), id => {
+      new H264PlayStream(id, new H264FileSource(id.file), new H264ConsumptionPipeline())
+    })
+    val consumer = ps.getConsumerOrElseUpdate(classOf[H264RtpConsumer], new H264RtpConsumer())
+    consumer.udpJoin(RequestHandler.server.rtpUDPServer.channel, ("192.168.2.19", clientPort))
+    ps.submit()
   }
 
   def buildOptionsResp(CSeq: Int, methods: Seq[String] = Seq("OPTIONS", "DESCRIBE", "SETUP", "TEARDOWN", "PLAY")): String = {
