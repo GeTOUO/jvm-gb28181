@@ -8,7 +8,7 @@ import com.getouo.gb.scl
 import com.getouo.gb.scl.io.H264FileSource
 import com.getouo.gb.scl.rtp.{H264RtpConsumer, SDPInfoBuilder}
 import com.getouo.gb.scl.server.RtpAndRtcpServerGroup
-import com.getouo.gb.scl.stream.{FileSourceId, H264ConsumptionPipeline, H264PlayStream, PlayStream}
+import com.getouo.gb.scl.stream.{FileSourceId, H264ConsumptionPipeline, H264PlayStream}
 import io.netty.buffer.{ByteBuf, Unpooled, UnpooledByteBufAllocator}
 import io.netty.channel.{Channel, ChannelFutureListener, ChannelHandlerContext, ChannelInboundHandlerAdapter}
 import io.netty.handler.codec.http.HttpUtil.isKeepAlive
@@ -16,14 +16,11 @@ import io.netty.handler.codec.http._
 import io.netty.util.CharsetUtil
 import io.netty.util.internal.logging.{InternalLogger, InternalLoggerFactory}
 
-class RtspHandler extends ChannelInboundHandlerAdapter {
+class RtspParserHandler extends ChannelInboundHandlerAdapter {
   protected val logger: InternalLogger = InternalLoggerFactory.getInstance(this.getClass)
 
   override def channelActive(ctx: ChannelHandlerContext): Unit = {
     logger.info("channelActive: {}", ctx)
-//    if (!ctx.channel().remoteAddress().asInstanceOf[InetSocketAddress].getAddress.getHostAddress.contains("192.168.2.19")) {
-//      ResponseBuilder.accessor.subscribeTCP(ctx.channel())
-//    }
   }
 
   override def exceptionCaught(ctx: ChannelHandlerContext, cause: Throwable): Unit = {
@@ -31,7 +28,6 @@ class RtspHandler extends ChannelInboundHandlerAdapter {
     ctx.close()
   }
 
-//  private var clientPort = 0
   override def channelRead(ctx: ChannelHandlerContext, msg: Any): Unit = {
     logger.info("[RTSPHandler]channelRead:  {}", msg.getClass)
     msg match {

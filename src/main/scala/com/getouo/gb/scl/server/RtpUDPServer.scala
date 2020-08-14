@@ -1,6 +1,6 @@
 package com.getouo.gb.scl.server
 
-import com.getouo.gb.scl.server.handler.RtspHandler
+import com.getouo.gb.scl.server.handler.RtspParserHandler
 import io.netty.bootstrap.Bootstrap
 import io.netty.channel.nio.NioEventLoopGroup
 import io.netty.channel.socket.nio.NioDatagramChannel
