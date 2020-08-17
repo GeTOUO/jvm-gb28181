@@ -1,14 +1,10 @@
 package com.getouo.gb.scl.server
 
-import com.getouo.gb.scl.server.handler.RtspParserHandler
 import io.netty.bootstrap.Bootstrap
-import io.netty.channel.nio.NioEventLoopGroup
-import io.netty.channel.socket.nio.NioDatagramChannel
 import io.netty.channel._
+import io.netty.channel.nio.NioEventLoopGroup
 import io.netty.channel.socket.DatagramPacket
-import io.netty.handler.codec.rtsp.RtspDecoder
-import io.netty.handler.codec.string.{StringDecoder, StringEncoder}
-import org.springframework.stereotype.Component
+import io.netty.channel.socket.nio.NioDatagramChannel
 
 /**
  * 负责处理服务器与客户端之间的请求与响应

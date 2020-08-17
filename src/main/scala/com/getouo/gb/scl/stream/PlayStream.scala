@@ -76,13 +76,13 @@ abstract class UnActivePlayStream[ID <: SourceId, S <: UnActiveSource[IN], IN <:
 
     while (in != EndSymbol) {
       consumptionPipeline.onNext(in)
-      Thread.sleep((30 + Math.random()).intValue())
+//      Thread.sleep((30 + Math.random()).intValue())
       in = source.produce()
       counter += 1
       logger.info(s"${getClass.getSimpleName} in: ${in} eq. ${in == EndSymbol}")
     }
     logger.info(s"${getClass.getSimpleName} is completed on ${in}; counter=$counter")
-    Thread.sleep(100 * 1000)
+//    Thread.sleep(100 * 1000)
     consumptionPipeline.onComplete()
     onStop()
   }

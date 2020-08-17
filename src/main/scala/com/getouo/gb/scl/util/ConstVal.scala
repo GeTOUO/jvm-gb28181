@@ -1,5 +1,7 @@
 package com.getouo.gb.scl.util
 
+import java.util.concurrent.atomic.AtomicInteger
+
 object ConstVal {
 
   sealed trait RtpTransType {
@@ -18,14 +20,21 @@ object ConstVal {
   /**
    *
    * @param sIp
-   * @param sPort
    * @param targetIp
    * @param targetPort
    * @param castType unicast：表示单播，如果是multicast则表示多播
    */
-  case class RtpOverUDP(sIp: String, sPort: Int, targetIp: String, targetPort: Int, castType: String = "unicast") extends RtpTransType {
+  case class RtpOverUDP(sIp: String, targetIp: String, targetPort: Int, castType: String = "unicast") extends RtpTransType {
     override val value = "RTP/AVP"
-    private def spValue(): String = if (sPort > 0 && sPort < 65535) ";server_port=${sPort}-${sPort + 1}" else ""
+    private val serverPort: AtomicInteger = new AtomicInteger(0)
+    def updateServerPort(port: Int): RtpOverUDP = {
+      serverPort.set(port)
+      this
+    }
+    private def spValue(): String = {
+      val portBuf = serverPort.get()
+      if (portBuf > 0 && portBuf < 65535) s";server_port=${portBuf}-${portBuf + 1}" else ""
+    }
     override def transportValue(): String = s"$value;$castType; client_port=$targetPort-${targetPort+1}${spValue()}"
   }
 

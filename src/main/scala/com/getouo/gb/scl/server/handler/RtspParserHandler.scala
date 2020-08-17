@@ -9,6 +9,7 @@ import com.getouo.gb.scl.io.H264FileSource
 import com.getouo.gb.scl.rtp.{H264RtpConsumer, SDPInfoBuilder}
 import com.getouo.gb.scl.server.RtpAndRtcpServerGroup
 import com.getouo.gb.scl.stream.{FileSourceId, H264ConsumptionPipeline, H264PlayStream}
+import com.getouo.gb.scl.util.ChannelUtil
 import io.netty.buffer.{ByteBuf, Unpooled, UnpooledByteBufAllocator}
 import io.netty.channel.{Channel, ChannelFutureListener, ChannelHandlerContext, ChannelInboundHandlerAdapter}
 import io.netty.handler.codec.http.HttpUtil.isKeepAlive
@@ -147,7 +148,7 @@ object RequestHandler {
   def execDescribe(channel: Channel, req: DefaultHttpRequest): Unit = {
     val reqSeq = req.headers().getInt("CSeq")
     logger.info(s"request describe: CSeq=${reqSeq}, request=${req}")
-    val str = buildDescribeResp(reqSeq, channel.localAddress().asInstanceOf[InetSocketAddress].getAddress.getHostAddress)
+    val str = buildDescribeResp(reqSeq, ChannelUtil.localIp(channel))
     logger.info(s"response describe: CSeq=${reqSeq}, response=${str}")
     channel.writeAndFlush(str)
   }

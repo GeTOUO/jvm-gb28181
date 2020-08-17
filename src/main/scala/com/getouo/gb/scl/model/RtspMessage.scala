@@ -69,6 +69,8 @@ case class RtspTeardownResponse(CSeq: Int) extends RtspResponse {
 case class RtspPlayRequest(url: String, CSeq: Int, session: Long, range: String) extends RtspRequest {
   override val method: String = RtspConstVal.RtspMethod.PLAY
 
+  def defaultResponse(): RtspPlayResponse = RtspPlayResponse(CSeq, session, range)
+
   override def stringMessage(): String =
     s"""
        |$method $url $version
@@ -79,7 +81,7 @@ case class RtspPlayRequest(url: String, CSeq: Int, session: Long, range: String)
        |""".stripMargin
 }
 
-case class RtspPlayResponse(CSeq: Int, session: Long, range: String, timeout: Int) extends RtspResponse {
+case class RtspPlayResponse(CSeq: Int, session: Long, range: String, timeout: Int = 60) extends RtspResponse {
   override def stringMessage(): String =
     s"""
        |$version 200 OK
@@ -114,6 +116,8 @@ case class RtspSetupResponse(CSeq: Int, rtpTransType: ConstVal.RtpTransType, ses
 
 case class RtspDescribeRequest(url: String, CSeq: Int, userAgent: String, accept: String) extends RtspRequest {
   override val method: String = RtspConstVal.RtspMethod.DESCRIBE
+
+  def defaultResponse(sdp: SDPInfo): RtspDescribeResponse = RtspDescribeResponse(CSeq, sdp, accept)
 
   override def stringMessage(): String =
     s"""
