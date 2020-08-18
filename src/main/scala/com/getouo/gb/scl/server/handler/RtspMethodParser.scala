@@ -8,6 +8,7 @@ import com.getouo.gb.scl.util.{ChannelUtil, ConstVal, LogSupport}
 import io.netty.channel.{Channel, ChannelHandlerContext}
 import io.netty.handler.codec.MessageToMessageDecoder
 import io.netty.handler.codec.http.{DefaultHttpRequest, HttpHeaders}
+import io.netty.handler.codec.rtsp.{RtspHeaderNames, RtspMethods}
 
 /**
  * RTSP交互流程
@@ -40,24 +41,23 @@ class RtspMethodParser extends MessageToMessageDecoder[DefaultHttpRequest] with 
 
   override def decode(ctx: ChannelHandlerContext, i: DefaultHttpRequest, list: util.List[AnyRef]): Unit = {
 
+    val headers = i.headers()
     logger.warn(
       s"""
-         |------------------------------------------------------------
-         |clientport=${ChannelUtil.castSocketAddr(ctx.channel().remoteAddress()).getPort}
-         |decode:  method=${i.method()} uri=${i.uri()}
-         |
-         |headers: ${i.headers()}
-         |------------------------------------------------------------
+         |+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+         ||收到【${i.method()}】↓↓↓↓↓↓↓↓↓↓ 【 uri=${i.uri()} 】clientPort=${ChannelUtil.castSocketAddr(ctx.channel().remoteAddress()).getPort}
+         ||headers: $headers
+         ||+-+-+-+-+-+-+-+-+-+-+-+-+-+↑↑↑↑↑收到↑↑↑↑↑+-+-+-+-+-+-+-+-+-+-+-+-+-+
          |""".stripMargin)
 
-    val headers = i.headers()
-    val CSeq: Int = headers.getInt("CSeq")
-    i.method().name().trim.toUpperCase match {
-      case "OPTIONS" => list.add(RtspOptionsRequest(i.uri(), CSeq))
-      case "DESCRIBE" => list.add(RtspDescribeRequest(i.uri(), CSeq, headers.get("User-Agent"), headers.get("Accept")))
-      case "SETUP" => list.add(RtspSetupRequest(i.uri(), CSeq, deSetupTrans(ctx.channel(), headers)))
-      case "PLAY" => list.add(RtspPlayRequest(i.uri(), CSeq, headers.getInt("Session").longValue(), headers.get("Range")))
-      case "TEARDOWN" => list.add(RtspTeardownRequest(i.uri(), CSeq, headers.get("Session").toLong))
+    val CSeq: Int = headers.getInt(RtspHeaderNames.CSEQ)
+    RtspHeaderNames.USER_AGENT
+    i.method() match {
+      case RtspMethods.OPTIONS => list.add(RtspOptionsRequest(i.uri(), CSeq))
+      case RtspMethods.DESCRIBE => list.add(RtspDescribeRequest(i.uri(), CSeq, headers.get(RtspHeaderNames.USER_AGENT), headers.get(RtspHeaderNames.ACCEPT)))
+      case RtspMethods.SETUP => list.add(RtspSetupRequest(i.uri(), CSeq, deSetupTrans(ctx.channel(), headers)))
+      case RtspMethods.PLAY => list.add(RtspPlayRequest(i.uri(), CSeq, headers.get(RtspHeaderNames.SESSION).toLong, headers.get(RtspHeaderNames.RANGE)))
+      case RtspMethods.TEARDOWN => list.add(RtspTeardownRequest(i.uri(), CSeq, headers.get(RtspHeaderNames.SESSION).toLong))
       case _ => logger.warn(s"收到未知的消息: $i")
     }
   }
@@ -69,7 +69,7 @@ class RtspMethodParser extends MessageToMessageDecoder[DefaultHttpRequest] with 
 
     val clientAddress = ChannelUtil.castSocketAddr(c.remoteAddress())
     // RTP/AVP;unicast;client_port=54492-54493\r\n
-    val str = h.get("Transport")
+    val str = h.get(RtspHeaderNames.TRANSPORT)
     val r = ".*RTP/([^;]*);.*".r
     val r(tt) = str
     if (tt == "AVP") {
@@ -82,7 +82,7 @@ class RtspMethodParser extends MessageToMessageDecoder[DefaultHttpRequest] with 
         ChannelUtil.castSocketAddr(RequestHandler.server.rtpUDPServer.channel.localAddress()).getPort
       )
     } else if (tt == "AVP/TCP") {
-      ConstVal.RtpOverTCP()
+      ConstVal.RtpOverTCP(str)
     } else {
       ConstVal.UnknownTransType
     }

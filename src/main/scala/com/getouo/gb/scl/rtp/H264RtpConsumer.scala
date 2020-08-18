@@ -8,6 +8,7 @@ import com.getouo.gb.scl.stream.{ConsumptionPipeline, SourceConsumer}
 import com.getouo.gb.scl.util.LogSupport
 import io.netty.buffer.Unpooled
 import io.netty.channel.socket.DatagramPacket
+import io.netty.util.ReferenceCountUtil
 import io.netty.util.concurrent.Future
 
 class H264RtpConsumer extends SourceConsumer[H264NaluData] with LogSupport {
@@ -19,24 +20,27 @@ class H264RtpConsumer extends SourceConsumer[H264NaluData] with LogSupport {
 
 
   var count = 0
+
   override def onNext(pipeline: ConsumptionPipeline[_, H264NaluData], data: H264NaluData): Unit = {
     timestamp += timestampIncrement
-      count+=1
-    data.rtpPacket(sendSeq, timestamp).map(Unpooled.copiedBuffer).foreach(bf => {
-      logger.info(s"H264RtpConsumer send count = ${count}")
+    count += 1
+    val packets = data.rtpPacket(sendSeq, timestamp)
+    packets.map(Unpooled.copiedBuffer).foreach(bf => {
       udpSubscriber.foreach { case (channel, subscribers) =>
         subscribers.map(info => {
-          bf.retain(); new DatagramPacket(bf, new InetSocketAddress(info._1, info._2))
-        }).foreach(addr => {
-          val future = channel.writeAndFlush(addr)
-          if (count >= 1490) {
-            future.addListener((f: Future[_]) => {
-              logger.warn(s"the count ${count} send result= ${f.isSuccess}")
-            })
-          }
-        })
+          bf.retain()
+          new DatagramPacket(bf, new InetSocketAddress(info._1, info._2))
+        }).foreach(addr => channel.writeAndFlush(addr))
       }
-      tcpSubscriber.writeAndFlush(bf)
+      ReferenceCountUtil.release(bf)
+    })
+    packets.map(p => {
+      val tcpHeader = new Array[Byte](4)
+      tcpHeader(0) = '$'
+      tcpHeader(1) = 0
+      tcpHeader(2) = ((p.length & 0xFF00) >> 8).byteValue()
+      tcpHeader(3) = (p.length & 0xFF).byteValue()
+      tcpSubscriber.writeAndFlush(Unpooled.copiedBuffer(tcpHeader ++ p))
     })
   }
 

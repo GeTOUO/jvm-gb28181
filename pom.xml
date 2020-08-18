@@ -25,6 +25,13 @@
 <!--            <groupId>org.springframework.boot</groupId>-->
 <!--            <artifactId>spring-boot-starter-data-mongodb</artifactId>-->
 <!--        </dependency>-->
+        <!-- https://mvnrepository.com/artifact/javax.sip/jain-sip-ri -->
+        <!-- https://mvnrepository.com/artifact/io.sipstack/sipstack-netty-codec-sip -->
+        <dependency>
+            <groupId>io.sipstack</groupId>
+            <artifactId>sipstack-netty-codec-sip</artifactId>
+            <version>0.1.1</version>
+        </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-data-redis</artifactId>

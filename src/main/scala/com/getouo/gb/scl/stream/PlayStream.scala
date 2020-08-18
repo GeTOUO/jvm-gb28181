@@ -69,7 +69,6 @@ abstract class UnActivePlayStream[ID <: SourceId, S <: UnActiveSource[IN], IN <:
   var counter = 0
 
   override protected def start(): Unit = {
-    logger.info(s"${getClass.getSimpleName} start produce")
     source.load()
     var in = source.produce()
     counter += 1
@@ -79,7 +78,6 @@ abstract class UnActivePlayStream[ID <: SourceId, S <: UnActiveSource[IN], IN <:
 //      Thread.sleep((30 + Math.random()).intValue())
       in = source.produce()
       counter += 1
-      logger.info(s"${getClass.getSimpleName} in: ${in} eq. ${in == EndSymbol}")
     }
     logger.info(s"${getClass.getSimpleName} is completed on ${in}; counter=$counter")
 //    Thread.sleep(100 * 1000)

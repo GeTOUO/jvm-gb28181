@@ -88,6 +88,7 @@ case class RtspPlayResponse(CSeq: Int, session: Long, range: String, timeout: In
        |CSeq: $CSeq
        |Range: $range
        |Session: $session; timeout=$timeout
+       |RTP-Info: url=trackID=0;seq=1;rtptime=3600
        |
        |""".stripMargin
 }
@@ -118,6 +119,13 @@ case class RtspDescribeRequest(url: String, CSeq: Int, userAgent: String, accept
   override val method: String = RtspConstVal.RtspMethod.DESCRIBE
 
   def defaultResponse(sdp: SDPInfo): RtspDescribeResponse = RtspDescribeResponse(CSeq, sdp, accept)
+
+  def resp404(message: String): String =
+    s"""
+       |$version 404 $message
+       |CSeq: $CSeq
+       |
+       |""".stripMargin
 
   override def stringMessage(): String =
     s"""

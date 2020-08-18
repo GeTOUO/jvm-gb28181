@@ -17,7 +17,8 @@ trait SourceConsumer[S <: ISourceData] extends LogSupport {
   protected val udpSubscriber: concurrent.Map[Channel, mutable.HashSet[(String, Int)]] =
     new ConcurrentHashMap[Channel, mutable.HashSet[(String, Int)]]().asScala
   // tcp 订阅
-  protected val tcpSubscriber: ChannelGroup = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE)
+//  protected val tcpSubscriber: ChannelGroup = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE)
+  protected val tcpSubscriber: DefaultChannelGroup = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE)
 
   def onNext(pipeline: ConsumptionPipeline[_, S], data: S): Unit
 

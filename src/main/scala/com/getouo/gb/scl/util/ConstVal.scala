@@ -38,9 +38,10 @@ object ConstVal {
     override def transportValue(): String = s"$value;$castType; client_port=$targetPort-${targetPort+1}${spValue()}"
   }
 
-  case class RtpOverTCP() extends RtpTransType {
+  case class RtpOverTCP(tv: String) extends RtpTransType {
     override val value: String = "RTP/AVP/TCP"
-    override def transportValue(): String = s"$value;unicast;interleaved=0-1"
+//    override def transportValue(): String = s"$value;unicast;interleaved=0-1"
+    override def transportValue(): String = tv
   }
 
   case object UnknownTransType extends RtpTransType {

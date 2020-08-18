@@ -28,9 +28,11 @@ class RtspDescribeHandler extends SimpleChannelInboundHandler[RtspDescribeReques
         ctx.writeAndFlush(i.defaultResponse(info))
       } else {
         logger.error(s"资源 $sourceName 不存在")
+        ctx.writeAndFlush(i.resp404(s"资源 $sourceName 不存在"))
       }
     } else {
       logger.error(s"在线资源 $sourceName 暂未处理")
+      ctx.writeAndFlush(i.resp404(s"在线资源 $sourceName 暂未处理"))
     }
   }
 
@@ -39,7 +41,9 @@ class RtspDescribeHandler extends SimpleChannelInboundHandler[RtspDescribeReques
     val targetIp: String = ChannelUtil.remoteIp(channel)
     //    val aGroup: Seq[(Char, String)] = Seq(('a', "rtpmap:96 H264/90000"), ('a', "framerate:25"), ('a', "control:track0"))
     val aGroup: Seq[(Char, String)] = Seq(('a', "rtpmap:96 H264/90000"), ('a', "framerate:25"), ('a', "control:trackID=0"))
+
     val mediaInfo = SDPMediaInfo(rtpTransType = ConstVal.RtpOverUDP(localIp, targetIp, 0), mediaFormat = 96, aGroup = aGroup)
+//    val mediaInfo = SDPMediaInfo(rtpTransType = ConstVal.RtpOverTCP(), mediaFormat = 96, aGroup = aGroup)
     SDPInfo(SDPSessionInfo(sessionIdIsNTPTimestamp = TimeUtil.currentMicTime(), serverIpAddress = localIp), Seq(mediaInfo))
   }
 }

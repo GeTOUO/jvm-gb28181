@@ -17,14 +17,35 @@ class RtspSetupHandler extends SimpleChannelInboundHandler[RtspSetupRequest] wit
         i.rtpTransType match {
           case udp@ConstVal.RtpOverUDP(_, targetIp, targetPort, castType) =>
             val response = udpSetup(session.id, i.CSeq, udp, ctx.channel())
-            logger.error(s" setup 即将回复: ${response.stringMessage()}")
             ctx.writeAndFlush(response)
-          case tcp@ConstVal.RtpOverTCP() =>
-            logger.info("暂未支持tcp传输")
+          case tcp@ConstVal.RtpOverTCP(_) =>
+            logger.info("tcp传输")
+            val response = tcpSetup(session.id, i.CSeq, tcp, ctx.channel())
+            ctx.writeAndFlush(response)
           case ConstVal.CustomRtpTransType(value, v2transport) => println(s"未处理扩展传输方式: $value")
-          case ConstVal.UnknownTransType => println("位置传输方式")
+          case ConstVal.UnknownTransType => println("未知传输方式")
         }
     }
+  }
+
+  private def tcpSetup(sourceName: String, CSeq: Int, transType: ConstVal.RtpOverTCP, channel: Channel): RtspSetupResponse = {
+    Session.updateChannelSession(channel, opt => {
+      val stream = H264PlayStream.getOrElseUpdateLocalFileH264Stream(FileSourceId(sourceName, System.currentTimeMillis()), id => {
+        import scala.concurrent.ExecutionContext.Implicits.global
+        new H264PlayStream(id, new H264FileSource(sourceName), new H264ConsumptionPipeline)
+      })
+      val consumer = stream.getConsumerOrElseUpdate(classOf[H264RtpConsumer], new H264RtpConsumer())
+      consumer.tcpJoin(channel)
+//      consumer.udpJoin(RequestHandler.server.rtpUDPServer.channel, (transType.targetIp, transType.targetPort))
+      Some(opt match {
+        case Some(session: RtpSession) =>
+          session.copy(pt = transType, playStreamOpt = Some(stream), consumerOpt = Some(consumer))
+        case _ =>
+          RtpSession(sourceName, transType, Some(stream), Some(consumer))
+      })
+    })
+    val session = Session.rtpSession(channel).get
+    RtspSetupResponse(CSeq, session.pt, session.idHash())
   }
 
   private def udpSetup(sourceName: String, CSeq: Int, transType: ConstVal.RtpOverUDP, channel: Channel): RtspSetupResponse = {
@@ -34,10 +55,6 @@ class RtspSetupHandler extends SimpleChannelInboundHandler[RtspSetupRequest] wit
         new H264PlayStream(id, new H264FileSource(sourceName), new H264ConsumptionPipeline)
       })
       val consumer = stream.getConsumerOrElseUpdate(classOf[H264RtpConsumer], new H264RtpConsumer())
-//      while (RequestHandler.server.rtpUDPServer.channel == null) {
-//        Thread.sleep(1)
-//      }
-//      transType.updateServerPort(ChannelUtil.castSocketAddr(RequestHandler.server.rtpUDPServer.channel.localAddress()).getPort)
       consumer.udpJoin(RequestHandler.server.rtpUDPServer.channel, (transType.targetIp, transType.targetPort))
       Some(opt match {
         case Some(session: RtpSession) =>
