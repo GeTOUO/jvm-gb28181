@@ -9,7 +9,7 @@ import io.netty.channel.socket.nio.NioDatagramChannel
 import io.netty.channel.{Channel, ChannelFuture, ChannelInitializer, ChannelOption, EventLoopGroup}
 import io.netty.handler.codec.http.{HttpObjectAggregator, HttpServerCodec}
 import io.netty.handler.codec.rtsp.RtspDecoder
-import io.sipstack.netty.codec.sip.SipMessageDatagramDecoder
+import io.sipstack.netty.codec.sip.{SipMessageDatagramDecoder, SipMessageEncoder}
 import org.springframework.stereotype.Component
 
 @Component
@@ -27,7 +27,8 @@ class SipUdpServer(configuration: PlatConfiguration, serverHandler: SipServerHan
         .handler(new ChannelInitializer[Channel]() {
           override def initChannel(ch: Channel): Unit = {
             ch.pipeline
-//              .addLast("empty-filter", new SipNonEmptyDatagramPacketFilter())
+              .addLast("sip-encoder", new SipMessageEncoder())
+              .addLast("empty-filter", new SipNonEmptyDatagramPacketFilter())
               .addLast(new SipMessageDatagramDecoder)
               .addLast(new ProxyHandler)
 //              .addLast("http-codec", new HttpServerCodec())
@@ -40,7 +41,7 @@ class SipUdpServer(configuration: PlatConfiguration, serverHandler: SipServerHan
       val channelFuture: ChannelFuture = b.bind(configuration.getPort).sync()
       serverHandler.setChannelFuture(channelFuture)
 
-      logger.info("sip udp server started")
+      logger.info(s"sip udp server started on ${configuration.getPort}")
       channelFuture.channel.closeFuture.sync
     } catch {
       case e: Exception => e.printStackTrace()
