@@ -1,14 +1,21 @@
 package com.getouo.gb.scl.server.handler
 
-import com.getouo.gb.scl.util.LogSupport
+import java.util.concurrent.TimeUnit
+
+import com.getouo.gb.scl.model.GBDevice
+import com.getouo.gb.scl.service.{DeviceService, RedisService}
+import com.getouo.gb.scl.util.{LogSupport, SpringContextUtil}
 import gov.nist.javax.sip.header.SIPHeaderNames
 import io.netty.channel.{Channel, ChannelHandlerContext, SimpleChannelInboundHandler}
 import io.pkts.buffer.Buffers
 import io.pkts.packet.sip.header.SipHeader
 import io.pkts.packet.sip.header.impl.SipHeaderImpl
 import io.pkts.packet.sip.{SipRequest, SipResponse}
-import io.sipstack.netty.codec.sip.SipMessageEvent
+import io.sipstack.netty.codec.sip.{SipMessageEvent, UdpConnection}
 import org.apache.commons.codec.digest.DigestUtils
+
+import scala.util.{Failure, Success, Try}
+import scala.xml.{Node, XML}
 
 class ProxyHandler extends SimpleChannelInboundHandler[SipMessageEvent] with LogSupport {
   override def channelRead0(ctx: ChannelHandlerContext, event: SipMessageEvent): Unit = {
@@ -22,31 +29,56 @@ class ProxyHandler extends SimpleChannelInboundHandler[SipMessageEvent] with Log
   }
 
   private def handlerRequest(channel: Channel, req: SipRequest, event: SipMessageEvent): SipResponse = {
+//
 
-    logger.info(
-      s"""
-         |【handlerRequest】+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-         |$req
-         |+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-         |""".stripMargin)
 
     if (req.isRegister) {
       val response = handleRegister(req)
       if (response != null) {
-        logger.info(
-          s"""
-             |///////////////////////////
-             |$response
-             |///////////////////////////
-             |""".stripMargin)
         event.getConnection.send(response)
       }
 
       //      sipResponse.getReasonPhrase
     } else if (req.isMessage) {
-      println(s"req.getContent =${req.getContent}")
-      println(s"req.getContent =${req.getContent.getClass}")
 
+      Try(XML.loadString(req.getContent.toString)) match {
+        case Failure(exception) => logger.error(s"解析请求消息失败: ${exception.getMessage}")
+        case Success(xml) =>
+          val xmlEmptyNode = <EmptyNode>EmptyNode</EmptyNode>
+          val cmdOpt: Option[Node] = (xml \ "CmdType").headOption
+          val deviceIdOpt: Option[Node] = (xml \ "DeviceID").headOption
+
+          val service = SpringContextUtil.getBean(clazz = classOf[DeviceService]).getOrElse(throw new RuntimeException("获取不到redis服务"))
+          val connection = event.getConnection
+          val udpOpt = if (connection.isUDP) {
+            val udpConn = connection.asInstanceOf[UdpConnection]
+            Some((udpConn.getRemoteIpAddress, udpConn.getRemotePort))
+          } else None
+
+          if (cmdOpt.exists(_.text == "Keepalive") && deviceIdOpt.isDefined) {
+            val deviceId = deviceIdOpt.map(_.text).get
+            service.keepalive(deviceId, oldOpt => {
+              oldOpt.map(_.copy(tcpOpt = if (connection.isTCP) Some(channel.id()) else None, udpAddrOpt = udpOpt))
+                .getOrElse(GBDevice(deviceId, if (connection.isTCP) Some(channel.id()) else None, udpOpt))
+            })
+            val response = req.createResponse(200)
+            event.getConnection.send(response)
+          } else {
+            logger.info(
+              s"""
+                 |【handlerRequest】+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+                 |$req
+                 |+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+                 |""".stripMargin)
+          }
+      }
+    } else {
+      logger.info(
+        s"""
+           |【handlerRequest】+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+           |$req
+           |+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+           |""".stripMargin)
     }
     null
   }
@@ -81,7 +113,7 @@ class ProxyHandler extends SimpleChannelInboundHandler[SipMessageEvent] with Log
         sipResponse.setHeader(new SipHeaderImpl(Buffers.wrap(SIPHeaderNames.WWW_AUTHENTICATE), wwwBuffer))
         sipResponse
       case (2, "REGISTER") =>
-//        authorization
+        //        authorization
 
         val sipResponse = req.createResponse(200)
         sipResponse.setHeader(new SipHeaderImpl(Buffers.wrap(SIPHeaderNames.EXPIRES), Buffers.wrap(3600)))
@@ -90,5 +122,46 @@ class ProxyHandler extends SimpleChannelInboundHandler[SipMessageEvent] with Log
 
         null
     }
+  }
+}
+
+
+object XmlT {
+  def main(args: Array[String]): Unit = {
+    //    val list = <ul><li>Fred</li><li>Wilma</li></ul>
+
+
+    val xmlStr =
+      s"""<?xml version="1.0" encoding="GB2312"?>
+         |<Notify>
+         |<CmdType>Keepalive</CmdType>
+         |<SN>825</SN>
+         |<DeviceID>43050200981328000010</DeviceID>
+         |<Status>OK</Status>
+         |<Info>
+         |</Info>
+         |</Notify>
+         |""".stripMargin
+    val list = XML.loadString(xmlStr)
+
+
+    val lists: scala.xml.Elem = <Notify>
+      <CmdType>Keepalive</CmdType>
+      <SN>431</SN>
+      <DeviceID>43050200981328000010</DeviceID>
+      <Status>OK</Status>
+      <Info>
+      </Info>
+    </Notify>
+
+
+    val titleNodes = list \ "DeviceID"
+
+    titleNodes.foreach(n => println(s"${n.label} ; ${n.text};  ${n.child.getClass}"))
+
+    val list2 = list.copy(label = "ol")
+    println(list.find(_.label == "Notify"))
+    println(list.getClass)
+    println(list2)
   }
 }

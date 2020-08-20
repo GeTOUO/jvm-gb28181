@@ -15,34 +15,33 @@ import org.springframework.stereotype.Component
 @Component
 class SipUdpServer(configuration: PlatConfiguration, serverHandler: SipServerHandler) extends RunnableServer {
 
+  private val bossGroup: EventLoopGroup = new NioEventLoopGroup
+  private val b: Bootstrap = new Bootstrap
+  val sender: Channel = {
+    b.group(bossGroup).channel(classOf[NioDatagramChannel])
+      .option[java.lang.Boolean](ChannelOption.SO_BROADCAST, true)
+      .handler(new ChannelInitializer[Channel]() {
+        override def initChannel(ch: Channel): Unit = {
+          ch.pipeline
+            .addLast("sip-encoder", new SipMessageEncoder())
+            .addLast("empty-filter", new SipNonEmptyDatagramPacketFilter())
+            .addLast(new SipMessageDatagramDecoder)
+            .addLast(new ProxyHandler)
+            //              .addLast("http-codec", new HttpServerCodec())
+            //              .addLast("aggregator", new HttpObjectAggregator(65536))
+            //              .addLast("sr", new SipRequestHandler())
+            .addLast(serverHandler)
+        }
+      })
+    val channelFuture: ChannelFuture = b.bind(configuration.getPort).sync()
+    serverHandler.setChannelFuture(channelFuture)
+    channelFuture.channel()
+  }
+
   override def run(): Unit = {
-    val bossGroup: EventLoopGroup = new NioEventLoopGroup
     try {
-      //通过NioDatagramChannel创建Channel，并设置Socket参数支持广播
-      //UDP相对于TCP不需要在客户端和服务端建立实际的连接，因此不需要为连接（ChannelPipeline）设置handler
-      val b: Bootstrap = new Bootstrap
-      b.group(bossGroup).channel(classOf[NioDatagramChannel])
-        .option[java.lang.Boolean](ChannelOption.SO_BROADCAST, true)
-//        .handler(serverHandler)
-        .handler(new ChannelInitializer[Channel]() {
-          override def initChannel(ch: Channel): Unit = {
-            ch.pipeline
-              .addLast("sip-encoder", new SipMessageEncoder())
-              .addLast("empty-filter", new SipNonEmptyDatagramPacketFilter())
-              .addLast(new SipMessageDatagramDecoder)
-              .addLast(new ProxyHandler)
-//              .addLast("http-codec", new HttpServerCodec())
-//              .addLast("aggregator", new HttpObjectAggregator(65536))
-//              .addLast("sr", new SipRequestHandler())
-              .addLast(serverHandler)
-          }
-        })
-
-      val channelFuture: ChannelFuture = b.bind(configuration.getPort).sync()
-      serverHandler.setChannelFuture(channelFuture)
-
       logger.info(s"sip udp server started on ${configuration.getPort}")
-      channelFuture.channel.closeFuture.sync
+      sender.closeFuture.sync
     } catch {
       case e: Exception => e.printStackTrace()
       case e =>

@@ -17,8 +17,6 @@ class SipNonEmptyDatagramPacketFilter extends SimpleChannelInboundHandler[Datagr
     val content = packet.content
     val gbkContent = content.toString(Charset.forName("gbk"))
 
-    logger.info(s"->>>>>>>>>>>>>>> ${gbkContent.length}")
-
 //    if (gbkContent.trim.isEmpty) {
 //      println("空包")
 //      return
