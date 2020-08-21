@@ -80,14 +80,3 @@ class H264FileSource(h264videoFileName: String, accFileName: Option[String] = No
     accFis = accFileName.map(new FileInputStream(_))
   }
 }
-
-object Hal {
-  def main(args: Array[String]): Unit = {
-    val source = new H264FileSource("src/main/resources/slamtv60.264", None)
-    var data = source.produce()
-    while (data != EndSymbol) {
-      println(data)
-      data = source.produce()
-    }
-  }
-}

@@ -13,14 +13,16 @@ import scala.jdk.CollectionConverters._
 trait PlayStreamGroup[ID <: SourceId, PS <: PlayStream[ID, _, _, _]] {
   val groups: concurrent.Map[ID, PS] = new ConcurrentHashMap[ID, PS]().asScala
 
-  def getOrElseUpdateLocalFileH264Stream(fileName: ID, op: ID => PS): PS = {
-    groups.getOrElseUpdate(fileName, op.apply(fileName))
+  def getOrElseUpdateLocalFileH264Stream(sourceId: ID, op: ID => PS): PS = {
+    groups.getOrElseUpdate(sourceId, op.apply(sourceId))
     //
     //    groups.getOrElseUpdate(fileName, {
     //      import scala.concurrent.ExecutionContext.Implicits.global
     //      new H264PlayStream(new H264FileSource(fileName), new H264ConsumptionPipeline())
     //    })
   }
+
+  def byIdOpt(sourceId: ID): Option[PS] = groups.get(sourceId)
 }
 
 trait PlayStream[ID <: SourceId, S <: Source[IN], IN <: ISourceData, OUT <: ISourceData] extends Runnable with LogSupport {
@@ -75,12 +77,12 @@ abstract class UnActivePlayStream[ID <: SourceId, S <: UnActiveSource[IN], IN <:
 
     while (in != EndSymbol) {
       consumptionPipeline.onNext(in)
-//      Thread.sleep((30 + Math.random()).intValue())
+      //      Thread.sleep((30 + Math.random()).intValue())
       in = source.produce()
       counter += 1
     }
     logger.info(s"${getClass.getSimpleName} is completed on ${in}; counter=$counter")
-//    Thread.sleep(100 * 1000)
+    //    Thread.sleep(100 * 1000)
     consumptionPipeline.onComplete()
     onStop()
   }
@@ -91,7 +93,6 @@ abstract class ActivePlayStream[ID <: SourceId, S <: ActiveSource[IN], IN <: ISo
   OUT <: ISourceData](source: S, val consumptionPipeline: ConsumptionPipeline[IN, OUT]) extends PlayStream[ID, S, IN, OUT] with Observer[IN] {
 
   override protected def start(): Unit = {
-    source.load()
     source.registerObserver(this)
   }
 
@@ -106,11 +107,17 @@ abstract class ActivePlayStream[ID <: SourceId, S <: ActiveSource[IN], IN <: ISo
 }
 
 
+class GB28181PlayStream(val id: GBSourceId, val source: GB28181RealtimeSource, pipeline: GB28181ConsumptionPipeline)
+  extends ActivePlayStream[GBSourceId, GB28181RealtimeSource, GB28181SourceData, GB28181H264DataData](source, pipeline) {
+  override protected def onStop(): Unit = GB28181PlayStream.groups.remove(this.id)
+}
+
+object GB28181PlayStream extends PlayStreamGroup[GBSourceId, GB28181PlayStream]
+
+
 class H264PlayStream(val id: FileSourceId, source: H264FileSource, pipeline: H264ConsumptionPipeline)
   extends UnActivePlayStream[FileSourceId, H264FileSource, H264SourceData, H264NaluData](source, pipeline) {
-  override protected def onStop(): Unit = {
-    H264PlayStream.groups.remove(this.id)
-  }
+  override protected def onStop(): Unit = H264PlayStream.groups.remove(this.id)
 }
 
 object H264PlayStream extends PlayStreamGroup[FileSourceId, H264PlayStream]
@@ -122,5 +129,5 @@ object PlayStream {
   private val MAX_THREAD_NUM = processors * 2 + 1
   var executor: ExecutorService = Executors.newFixedThreadPool(MAX_THREAD_NUM)
 
-  protected def submit[_](ps: PlayStream[_,_,_,_]): Future[_] = executor.submit(ps)
+  protected def submit[_](ps: PlayStream[_, _, _, _]): Future[_] = executor.submit(ps)
 }

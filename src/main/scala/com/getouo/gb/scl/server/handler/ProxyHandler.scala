@@ -1,9 +1,9 @@
 package com.getouo.gb.scl.server.handler
 
-import java.util.concurrent.TimeUnit
-
 import com.getouo.gb.scl.model.GBDevice
-import com.getouo.gb.scl.service.{DeviceService, RedisService}
+import com.getouo.gb.scl.service.DeviceService
+import com.getouo.gb.scl.sip.SipMessageTemplate
+import com.getouo.gb.scl.stream.{GB28181PlayStream, GBSourceId}
 import com.getouo.gb.scl.util.{LogSupport, SpringContextUtil}
 import gov.nist.javax.sip.header.SIPHeaderNames
 import io.netty.channel.{Channel, ChannelHandlerContext, SimpleChannelInboundHandler}
@@ -23,13 +23,35 @@ class ProxyHandler extends SimpleChannelInboundHandler[SipMessageEvent] with Log
     msg match {
       //      case request: SipRequest => ctx.writeAndFlush(handlerRequest(request))
       case request: SipRequest => handlerRequest(ctx.channel(), request, event)
-      case response: SipResponse => logger.error(s"不接受响应")
+      case response: SipResponse => handlerResponse(ctx.channel(), response, event)
       case _ => logger.error(s"不接受未知消息")
     }
   }
 
+  private def handlerResponse(channel: Channel, resp: SipResponse, event: SipMessageEvent): Unit = {
+    val tag = resp.getFromHeader.getTag
+    logger.info(
+      s"""
+         |收到响应: tag=$tag
+         |$resp
+         |""".stripMargin)
+    if (resp.isFinal && resp.isInvite) {
+      val ack = SipMessageTemplate.generateAck(resp)
+
+
+      GB28181PlayStream.byIdOpt(GBSourceId(tag.toString, tag.toString)).foreach(f => {
+        f.
+      })
+
+
+      event.getConnection.send(ack)
+    }
+
+
+  }
+
   private def handlerRequest(channel: Channel, req: SipRequest, event: SipMessageEvent): SipResponse = {
-//
+    //
 
 
     if (req.isRegister) {
@@ -104,23 +126,19 @@ class ProxyHandler extends SimpleChannelInboundHandler[SipMessageEvent] with Log
     val p(deviceId, domain) = req.getFromHeader.getAddress.getURI.toString
 
     System.err.println(s"authorization ========== ${authorizations}")
-
-    (req.getCSeqHeader.getSeqNumber, req.getCSeqHeader.getMethod.toString) match {
-      case (1, "REGISTER") =>
+    val seqNumber = req.getCSeqHeader.getSeqNumber
+    req.getCSeqHeader.getMethod.toString.trim.toUpperCase match {
+      case "REGISTER" if authorizations.isEmpty =>
         val sipResponse = req.createResponse(401)
         val nonce = DigestUtils.md5Hex(callId + deviceId)
         val wwwBuffer = Buffers.wrap(s"""Digest realm="4305000098", nonce="$nonce"""")
         sipResponse.setHeader(new SipHeaderImpl(Buffers.wrap(SIPHeaderNames.WWW_AUTHENTICATE), wwwBuffer))
         sipResponse
-      case (2, "REGISTER") =>
-        //        authorization
-
+      case "REGISTER" if authorizations.nonEmpty =>
         val sipResponse = req.createResponse(200)
         sipResponse.setHeader(new SipHeaderImpl(Buffers.wrap(SIPHeaderNames.EXPIRES), Buffers.wrap(3600)))
         sipResponse
-      case (3, "REGISTER") =>
-
-        null
+      case _ => null
     }
   }
 }

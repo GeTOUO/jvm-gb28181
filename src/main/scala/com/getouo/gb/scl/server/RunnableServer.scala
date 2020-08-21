@@ -4,7 +4,7 @@ import io.netty.util.internal.logging.{InternalLogger, InternalLoggerFactory}
 import javax.annotation.PostConstruct
 
 
-abstract class RunnableServer extends Runnable {
+trait RunnableServer extends Runnable {
 
   protected val logger: InternalLogger = InternalLoggerFactory.getInstance(this.getClass)
 

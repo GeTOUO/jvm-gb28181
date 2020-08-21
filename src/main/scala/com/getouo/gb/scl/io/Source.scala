@@ -1,6 +1,6 @@
 package com.getouo.gb.scl.io
 
-import com.getouo.gb.scl.util.Observer
+import com.getouo.gb.scl.util.{LogSupport, Observer}
 
 import scala.util.Try
 
@@ -9,8 +9,8 @@ import scala.util.Try
  *
  * @tparam S
  */
-sealed trait Source[S <: ISourceData] {
-  def load(): Unit
+sealed trait Source[S <: ISourceData] extends LogSupport {
+//  def load(): Unit
 }
 
 /**
@@ -19,6 +19,7 @@ sealed trait Source[S <: ISourceData] {
  */
 trait UnActiveSource[S <: ISourceData] extends Source[S] {
   def produce(): S
+  def load(): Unit
 }
 
 /**

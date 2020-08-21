@@ -134,3 +134,7 @@ object H264NaluData {
 }
 
 case object EndSymbol extends EndSymbolData with H264SourceData
+
+trait GB28181SourceData extends ISourceData
+
+case class GB28181H264DataData(bytes: Array[Byte]) extends GB28181SourceData
