@@ -24,7 +24,7 @@ class DeviceService(redis: RedisService, udpServer: SipUdpServer, platCfg: PlatC
   def keepalive(id: String, put: Option[GBDevice] => GBDevice): Unit =
     redis.setKVTimeLimit(id, put.apply(findDevice(id)), 60, TimeUnit.SECONDS)
 
-  implicit def defaultTrue(u: Unit): Boolean = true
+  private implicit def defaultTrue(u: Unit): Boolean = true
 
   def offline(id: String): Option[GBDevice] = findDevice(id).filter(d => redis.removeValue(d.id))
 

@@ -1,13 +1,16 @@
 package com.getouo.gb.scl.io
 
-import com.getouo.gb.scl.server.MediaStreamServer
+import java.util.concurrent.atomic.AtomicReference
+
+import com.getouo.gb.scl.server.RealtimeMediaStreamServer
 import com.getouo.gb.scl.util.ChannelUtil
 import io.netty.buffer.ByteBuf
 import io.netty.channel.{ChannelHandlerContext, ChannelInboundHandlerAdapter}
 import io.netty.util.ReferenceCountUtil
 
 class GB28181RealtimeSource() extends ChannelInboundHandlerAdapter with ActiveSource[GB28181SourceData] {
-  val streamChannel = new MediaStreamServer(this)
+  val streamChannel = new RealtimeMediaStreamServer(this)
+  val sdpInfo = new AtomicReference[String]("")
 
   override def channelActive(ctx: ChannelHandlerContext): Unit = {
     logger.info(s"收到连接: ${ctx.channel().remoteAddress()}, " +

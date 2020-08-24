@@ -118,7 +118,8 @@ case class RtspSetupResponse(CSeq: Int, rtpTransType: ConstVal.RtpTransType, ses
 case class RtspDescribeRequest(url: String, CSeq: Int, userAgent: String, accept: String) extends RtspRequest {
   override val method: String = RtspConstVal.RtspMethod.DESCRIBE
 
-  def defaultResponse(sdp: SDPInfo): RtspDescribeResponse = RtspDescribeResponse(CSeq, sdp, accept)
+  def defaultResponse(sdp: SDPInfo): RtspDescribeResponse = new RtspDescribeResponse(CSeq, sdp, accept)
+  def defaultResponse(sdp: String): RtspDescribeResponse = RtspDescribeResponse(CSeq, sdp, accept)
 
   def resp404(message: String): String =
     s"""
@@ -137,8 +138,11 @@ case class RtspDescribeRequest(url: String, CSeq: Int, userAgent: String, accept
        |""".stripMargin
 }
 
-case class RtspDescribeResponse(CSeq: Int, sdp: SDPInfo, contentType: String) extends RtspResponse {
-  private val sdpStr: String = sdp.text()
+case class RtspDescribeResponse(CSeq: Int, sdpStr: String, contentType: String) extends RtspResponse {
+  def this(CSeq: Int, sdp: SDPInfo, contentType: String) {
+    this(CSeq, sdp.text(), contentType)
+  }
+//  private val sdpStr: String = sdp
   override def stringMessage(): String =
     s"""
        |$version 200 OK

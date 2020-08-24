@@ -11,7 +11,7 @@ import io.netty.handler.codec.LengthFieldBasedFrameDecoder
 import scala.util.{Failure, Success, Try}
 
 //@Component
-class MediaStreamServer(handler: ChannelInboundHandlerAdapter) extends RunnableServer {
+class RealtimeMediaStreamServer(handler: ChannelInboundHandlerAdapter) extends RunnableServer {
 
   override def run(): Unit = {
     try {

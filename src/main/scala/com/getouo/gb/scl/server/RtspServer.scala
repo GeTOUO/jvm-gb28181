@@ -29,9 +29,10 @@ class RtspServer extends RunnableServer {
               .addLast(new RtspDecoder) // 添加netty自带的rtsp消息解析器
               .addLast(new StringEncoder()) // 支持直接发送字符串
               .addLast(new RtspResponseEncoder()) // 支持直接发送RtspResponse
-
               .addLast(new StringDecoder()) // 支持收string
+
               .addLast(new RtspMethodParser) // 上一步将消息解析完成之后, 再交给自定义的处理器
+
               .addLast(new RtspOptionsHandler) // 上一步将消息解析完成之后, 再交给自定义的处理器
               .addLast(new RtspDescribeHandler) // 上一步将消息解析完成之后, 再交给自定义的处理器
               .addLast(new RtspSetupHandler) // 上一步将消息解析完成之后, 再交给自定义的处理器

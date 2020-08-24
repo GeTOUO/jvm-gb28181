@@ -35,12 +35,18 @@ class ProxyHandler extends SimpleChannelInboundHandler[SipMessageEvent] with Log
          |收到响应: tag=$tag
          |$resp
          |""".stripMargin)
+    logger.info(
+      s"""
+         |收到响应: tag=$tag; content :
+         |${resp.getRawContent}
+         |""".stripMargin)
+
     if (resp.isFinal && resp.isInvite) {
       val ack = SipMessageTemplate.generateAck(resp)
 
 
       GB28181PlayStream.byIdOpt(GBSourceId(tag.toString, tag.toString)).foreach(f => {
-        f.
+        f.source.sdpInfo.set(resp.getRawContent.toString)
       })
 
 

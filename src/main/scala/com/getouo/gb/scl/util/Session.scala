@@ -1,12 +1,12 @@
 package com.getouo.gb.scl.util
 
-import com.getouo.gb.scl.stream.{PlayStream, SourceConsumer}
+import com.getouo.gb.scl.stream.{PlayStream, SourceConsumer, SourceId}
 import com.getouo.gb.scl.util.ConstVal.{RtpTransType, UnknownTransType}
 import io.netty.channel.Channel
 import io.netty.util.AttributeKey
 
 sealed trait Session {
-  val id: String // fileName or ChannelId
+  val id: SourceId // fileName or ChannelId
   val playStreamOpt: Option[PlayStream[_, _, _, _]]
   val consumerOpt: Option[SourceConsumer[_]]
 
@@ -34,6 +34,6 @@ object Session {
   }
 }
 
-case class RtpSession(id: String, pt: RtpTransType = UnknownTransType,
+case class RtpSession(id: SourceId, pt: RtpTransType = UnknownTransType,
                       playStreamOpt: Option[PlayStream[_, _, _, _]], consumerOpt: Option[SourceConsumer[_]]) extends Session {
 }

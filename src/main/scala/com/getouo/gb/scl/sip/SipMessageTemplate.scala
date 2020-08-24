@@ -1,5 +1,7 @@
 package com.getouo.gb.scl.sip
 
+import gov.nist.javax.sdp.SessionDescriptionImpl
+import gov.nist.javax.sdp.fields.{OriginField, SDPField}
 import gov.nist.javax.sip.header.SIPHeaderNames
 import io.pkts.buffer.Buffers
 import io.pkts.packet.sip.address.SipURI
@@ -7,27 +9,29 @@ import io.pkts.packet.sip.header.{CSeqHeader, CallIdHeader, ContactHeader, FromH
 import io.pkts.packet.sip.header.impl.{SipHeaderImpl, ViaHeaderImpl}
 import io.pkts.packet.sip.impl.SipRequestImpl
 import io.pkts.packet.sip.{SipMessage, SipRequest, SipResponse}
+import io.pkts.sdp.SDPFactory
+import javax.sdp.{SdpFactory, SessionDescription}
 
 object SipMessageTemplate {
 
-//  def inviteRequest(deviceId: String, deviceLocalIp: String, deviceLocalPort: Int, callId: String,
-//                    serverId: String, serverIp: String, serverPort: Int, ssrc: String, contentLength: Int): String = {
-//    s"""INVITE sip:${deviceId}@${serverId} SIP/2.0
-//       |Call-ID: ${callId}
-//       |CSeq: 101 INVITE
-//       |From: <sip:${serverId}@${serverIp}:${serverPort}>;tag=live
-//       |To: "${deviceId}" <sip:${deviceId}@${deviceLocalIp}:${deviceLocalPort}>
-//       |Via: SIP/2.0/UDP ${serverIp}:${serverPort};branch=branchlive
-//       |Max-Forwards: 70
-//       |Content-Type: Application/sdp
-//       |Contact: <sip:${serverId}@${serverIp}:${serverPort}>
-//       |Supported: 100re1
-//       |Subject: ${deviceId}:010000${ssrc},${serverId}:0
-//       |User-Agent: fyl
-//       |Content-Length: ${contentLength}
-//       |
-//       |""".stripMargin
-//  }
+  //  def inviteRequest(deviceId: String, deviceLocalIp: String, deviceLocalPort: Int, callId: String,
+  //                    serverId: String, serverIp: String, serverPort: Int, ssrc: String, contentLength: Int): String = {
+  //    s"""INVITE sip:${deviceId}@${serverId} SIP/2.0
+  //       |Call-ID: ${callId}
+  //       |CSeq: 101 INVITE
+  //       |From: <sip:${serverId}@${serverIp}:${serverPort}>;tag=live
+  //       |To: "${deviceId}" <sip:${deviceId}@${deviceLocalIp}:${deviceLocalPort}>
+  //       |Via: SIP/2.0/UDP ${serverIp}:${serverPort};branch=branchlive
+  //       |Max-Forwards: 70
+  //       |Content-Type: Application/sdp
+  //       |Contact: <sip:${serverId}@${serverIp}:${serverPort}>
+  //       |Supported: 100re1
+  //       |Subject: ${deviceId}:010000${ssrc},${serverId}:0
+  //       |User-Agent: fyl
+  //       |Content-Length: ${contentLength}
+  //       |
+  //       |""".stripMargin
+  //  }
 
   def inviteRequest(channel: String, deviceIp: String, devicePort: Int, sipServerId: String,
                     callId: String, sipIp: String, sPort: Int, fromTag: String, mediaServerIp: String, mediaServerPort: Int): SipRequest = {
@@ -91,7 +95,7 @@ object SipMessageTemplate {
     // any transport protocol and it can actually change from message
     // to message but in this simple example we will just use the
     // same last time so we will only have to generate a new branch id
-//    val via: ViaHeader = response.getViaHeader.clone.asInstanceOf[ViaHeader]
+    //    val via: ViaHeader = response.getViaHeader.clone.asInstanceOf[ViaHeader]
     val via: ViaHeader = response.getViaHeader
     via.asInstanceOf[ViaHeaderImpl].clone.setBranch(ViaHeader.generateBranch)
 
@@ -104,5 +108,4 @@ object SipMessageTemplate {
     builder.via(via)
     builder.build
   }
-
 }
