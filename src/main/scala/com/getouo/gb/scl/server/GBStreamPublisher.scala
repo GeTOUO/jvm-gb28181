@@ -1,6 +1,6 @@
 package com.getouo.gb.scl.server
 
-import com.getouo.gb.scl.io.GB28181H264DataData
+import com.getouo.gb.scl.data.PSH264IFrame
 import com.getouo.gb.scl.stream.{ConsumptionPipeline, SourceConsumer}
 import com.getouo.gb.scl.util.ChannelUtil
 import io.netty.bootstrap.ServerBootstrap
@@ -17,7 +17,7 @@ import io.netty.util.concurrent.GlobalEventExecutor
 import scala.util.{Failure, Success, Try}
 
 @Sharable
-class GBStreamPublisher extends ChannelInboundHandlerAdapter with Runnable with SourceConsumer[GB28181H264DataData]{
+class GBStreamPublisher extends ChannelInboundHandlerAdapter with Runnable with SourceConsumer[PSH264IFrame]{
 
   val thisHandler: GBStreamPublisher = this
   val actors: ChannelGroup = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE)
@@ -79,15 +79,18 @@ class GBStreamPublisher extends ChannelInboundHandlerAdapter with Runnable with 
   val channel: Channel = whileTryPort(b, 10000).channel()
   val localPort: Int = ChannelUtil.castSocketAddr(channel.localAddress()).getPort
 
-  override def onNext(pipeline: ConsumptionPipeline[_, GB28181H264DataData], data: GB28181H264DataData): Unit = {
-    actors.writeAndFlush(Unpooled.copiedBuffer(data.bytes))
+  override def onNext(pipeline: ConsumptionPipeline[_, PSH264IFrame], data: PSH264IFrame): Unit = {
+    tcpSubscriber.writeAndFlush(Unpooled.copiedBuffer(data.bytes))
+//    tcpSubscriber.
+
+//    actors.writeAndFlush(Unpooled.copiedBuffer(data.bytes))
   }
 
-  override def onError(pipeline: ConsumptionPipeline[_, GB28181H264DataData], thr: Throwable): Unit = {
+  override def onError(pipeline: ConsumptionPipeline[_, PSH264IFrame], thr: Throwable): Unit = {
     logger.error(s"on error $thr")
   }
 
-  override def onComplete(pipeline: ConsumptionPipeline[_, GB28181H264DataData]): Unit = {
+  override def onComplete(pipeline: ConsumptionPipeline[_, PSH264IFrame]): Unit = {
     logger.info(s"onComplete")
   }
 }

@@ -3,7 +3,7 @@ package com.getouo.gb.scl.service
 import java.util.concurrent.TimeUnit
 
 import com.getouo.gb.configuration.PlatConfiguration
-import com.getouo.gb.scl.io.GB28181RealtimeSource
+import com.getouo.gb.scl.io.GB28181RealtimeTCPSource
 import com.getouo.gb.scl.model.GBDevice
 import com.getouo.gb.scl.server.{GBStreamPublisher, SipUdpServer}
 import com.getouo.gb.scl.sip.SipMessageTemplate
@@ -39,19 +39,10 @@ class DeviceService(redis: RedisService, udpServer: SipUdpServer, platCfg: PlatC
             //            val localIp = conn.getLocalIpAddress
             val localIp = "192.168.2.19"
             val sourceId = GBSourceId(id, id)
-            val ps: GB28181PlayStream = GB28181PlayStream.getOrElseUpdateLocalFileH264Stream(sourceId, id => {
-              import scala.concurrent.ExecutionContext.Implicits.global
-              val pipeline = new GB28181ConsumptionPipeline
-              val stream = new GB28181PlayStream(id, new GB28181RealtimeSource(), pipeline)
-              stream.submit()
-              stream
-            })
+            getPlayStream(sourceId)
 
-            val consumer: GBStreamPublisher = ps.getConsumerOrElseUpdate(classOf[GBStreamPublisher], {
-              val publisher = new GBStreamPublisher()
-              new Thread(publisher).start()
-              publisher
-            })
+            val ps: GB28181PlayStream = getPlayStream(sourceId)
+            val consumer: GBStreamPublisher = getGBPublisher(ps)
 
             val playMessage = SipMessageTemplate.inviteRequest(
               channel = id, deviceIp = conn.getRemoteIpAddress, devicePort = conn.getRemotePort, sipServerId = platCfg.getId,
@@ -66,4 +57,15 @@ class DeviceService(redis: RedisService, udpServer: SipUdpServer, platCfg: PlatC
         }
     }
   }
+
+  def getPlayStream(sourceId: GBSourceId): GB28181PlayStream = {
+    import scala.concurrent.ExecutionContext.Implicits.global
+    GB28181PlayStream.getOrElseSubmit(sourceId, id => new GB28181PlayStream(id, new GB28181RealtimeTCPSource(), new GB28181ConsumptionPipeline))
+  }
+
+  def getGBPublisher(ps: GB28181PlayStream): GBStreamPublisher = ps.getOrElseAddConsumer(classOf[GBStreamPublisher], {
+    val publisher = new GBStreamPublisher()
+    new Thread(publisher).start()
+    publisher
+  })
 }

@@ -1,6 +1,6 @@
 package com.getouo.gb.scl.util
 
-import com.getouo.gb.scl.io.{H264NaluData, UnsafeNaluData}
+import com.getouo.gb.scl.data.{H264NaluData, UnsafeNaluData}
 
 object H264NALUFramer {
 

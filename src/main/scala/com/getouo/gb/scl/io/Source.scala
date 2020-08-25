@@ -1,5 +1,6 @@
 package com.getouo.gb.scl.io
 
+import com.getouo.gb.scl.data.ISourceData
 import com.getouo.gb.scl.util.{LogSupport, Observer}
 
 import scala.util.Try

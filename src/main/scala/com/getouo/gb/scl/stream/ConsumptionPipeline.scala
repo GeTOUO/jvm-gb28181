@@ -2,7 +2,7 @@ package com.getouo.gb.scl.stream
 
 import java.util.concurrent.ConcurrentHashMap
 
-import com.getouo.gb.scl.io.ISourceData
+import com.getouo.gb.scl.data.ISourceData
 import com.getouo.gb.scl.util.Observer
 import io.netty.channel.Channel
 

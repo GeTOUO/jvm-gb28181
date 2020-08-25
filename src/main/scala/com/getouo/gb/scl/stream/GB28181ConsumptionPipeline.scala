@@ -1,15 +1,15 @@
 package com.getouo.gb.scl.stream
 
-import com.getouo.gb.scl.io.{GB28181H264DataData, GB28181SourceData}
+import com.getouo.gb.scl.data.{PSH264IFrame, PSH264Data}
 
 import scala.concurrent.ExecutionContext
 
 class GB28181ConsumptionPipeline(implicit val ec: ExecutionContext)
-  extends DefaultConsumptionPipeline[GB28181SourceData, GB28181H264DataData] {
+  extends DefaultConsumptionPipeline[PSH264Data, PSH264IFrame] {
 
-  override def decode(in: GB28181SourceData): Option[GB28181H264DataData] =
+  override def decode(in: PSH264Data): Option[PSH264IFrame] =
     in match {
-      case out@GB28181H264DataData(_) => Some(out)
+      case out@PSH264IFrame(_) => Some(out)
       case _ => None
     }
 

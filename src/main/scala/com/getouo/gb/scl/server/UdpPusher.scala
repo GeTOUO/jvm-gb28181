@@ -5,11 +5,15 @@ import io.netty.channel._
 import io.netty.channel.nio.NioEventLoopGroup
 import io.netty.channel.socket.DatagramPacket
 import io.netty.channel.socket.nio.NioDatagramChannel
+import org.springframework.stereotype.Component
 
 /**
  * udp 推送服务器
  */
-class UdpPusher(port: Int) extends RunnableServer {
+@Component
+class UdpPusher extends RunnableServer {
+
+  val port = 23456
 
   private val bossGroup: EventLoopGroup = new NioEventLoopGroup
   val channel: Channel = initCfg()
@@ -31,7 +35,7 @@ class UdpPusher(port: Int) extends RunnableServer {
       .option[java.lang.Boolean](ChannelOption.SO_BROADCAST, true)
       .handler(new SimpleChannelInboundHandler[DatagramPacket]() {
         override def channelRead0(channelHandlerContext: ChannelHandlerContext, i: DatagramPacket): Unit = {
-          println(s"udp server[$port] 收到:" + i.content().isReadable)
+          logger.info(s"udp server[$port] 收到:" + i.content().isReadable)
         }
       })
     logger.info(s"ready start udp[$port] server")

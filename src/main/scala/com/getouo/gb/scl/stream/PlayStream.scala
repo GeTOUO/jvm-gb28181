@@ -3,6 +3,7 @@ package com.getouo.gb.scl.stream
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.{ConcurrentHashMap, ExecutorService, Executors, Future}
 
+import com.getouo.gb.scl.data.{EndSymbol, PSH264IFrame, PSH264Data, H264NaluData, H264SourceData, ISourceData}
 import com.getouo.gb.scl.io._
 import com.getouo.gb.scl.util.{LogSupport, Observer}
 import io.netty.channel.Channel
@@ -13,8 +14,13 @@ import scala.jdk.CollectionConverters._
 trait PlayStreamGroup[ID <: SourceId, PS <: PlayStream[ID, _, _, _]] {
   val groups: concurrent.Map[ID, PS] = new ConcurrentHashMap[ID, PS]().asScala
 
-  def getOrElseUpdateLocalFileH264Stream(sourceId: ID, op: ID => PS): PS = {
-    groups.getOrElseUpdate(sourceId, op.apply(sourceId))
+  def getOrElseSubmit(sourceId: ID, op: ID => PS): PS = {
+    groups.getOrElseUpdate(sourceId, {
+      val ps = op.apply(sourceId)
+      ps.submit()
+      System.err.println(s"trait PlayStreamGroup: $ps is submit")
+      ps
+    })
     //
     //    groups.getOrElseUpdate(fileName, {
     //      import scala.concurrent.ExecutionContext.Implicits.global
@@ -48,10 +54,14 @@ trait PlayStream[ID <: SourceId, S <: Source[IN], IN <: ISourceData, OUT <: ISou
   private val runStatus = new AtomicBoolean(false)
 
   final def submit(): Unit = {
-    if (runStatus.compareAndSet(false, true)) PlayStream.submit(this)
+    if (runStatus.compareAndSet(false, true)) {
+      PlayStream.submit(this)
+//      val value = PlayStream.submit(this).get()
+//      println(s"submit : $value")
+    }
   }
 
-  def getConsumerOrElseUpdate[C <: SourceConsumer[OUT]](consumerClz: Class[C], op: => C): C = {
+  def getOrElseAddConsumer[C <: SourceConsumer[OUT]](consumerClz: Class[C], op: => C): C = {
     consumptionPipeline.getConsumerOrElseUpdate(consumerClz, op)
   }
 
@@ -74,10 +84,9 @@ abstract class UnActivePlayStream[ID <: SourceId, S <: UnActiveSource[IN], IN <:
     source.load()
     var in = source.produce()
     counter += 1
-
     while (in != EndSymbol) {
       consumptionPipeline.onNext(in)
-      //      Thread.sleep((30 + Math.random()).intValue())
+            Thread.sleep((30 + Math.random()).intValue())
       in = source.produce()
       counter += 1
     }
@@ -107,8 +116,8 @@ abstract class ActivePlayStream[ID <: SourceId, S <: ActiveSource[IN], IN <: ISo
 }
 
 
-class GB28181PlayStream(val id: GBSourceId, val source: GB28181RealtimeSource, pipeline: GB28181ConsumptionPipeline)
-  extends ActivePlayStream[GBSourceId, GB28181RealtimeSource, GB28181SourceData, GB28181H264DataData](source, pipeline) {
+class GB28181PlayStream(val id: GBSourceId, val source: GB28181RealtimeTCPSource, pipeline: GB28181ConsumptionPipeline)
+  extends ActivePlayStream[GBSourceId, GB28181RealtimeTCPSource, PSH264Data, PSH264IFrame](source, pipeline) {
   override protected def onStop(): Unit = GB28181PlayStream.groups.remove(this.id)
 }
 

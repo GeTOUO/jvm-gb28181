@@ -1,18 +1,9 @@
-package com.getouo.gb.scl.io
+package com.getouo.gb.scl.data
 
 import java.nio.ByteBuffer
 import java.util.concurrent.atomic.AtomicInteger
+;
 
-trait ISourceData
-trait H264SourceData extends ISourceData
-
-trait EndSymbolData extends ISourceData
-
-case class ErrorSourceData(thr: Throwable) extends ISourceData
-case class ByteSourceData(array: Array[Byte]) extends ISourceData
-
-trait UnsafeNaluData
-case class EmptyNaluData(startLen: Int) extends UnsafeNaluData
 case class H264NaluData(startCodeLen: Int, nalu: Array[Byte]) extends H264SourceData with UnsafeNaluData {
   private val nalu_head: Byte = nalu.head
   val forbiddenBit: Int = nalu_head & 0x80 //1 bit 一般为0，为 1 时表示此单元出现错误，解码器会丢弃该数据，按丢包处理。
@@ -121,20 +112,15 @@ case class H264NaluData(startCodeLen: Int, nalu: Array[Byte]) extends H264Source
     seqBuffer.get(header, 2, 2)
   }
 }
+
 object H264NaluData {
   val DEFAULT_MTU_LEN = 1400
   val FUIndicatorType = 28
 
-//  val seqIOBuffer: ByteBuffer = ByteBuffer.allocateDirect(4)
+  //  val seqIOBuffer: ByteBuffer = ByteBuffer.allocateDirect(4)
   def of(startLen: Int, nalu: Array[Byte]): UnsafeNaluData = {
     if (nalu.length <= 0) {
       EmptyNaluData(startLen)
     } else H264NaluData(startLen, nalu)
   }
 }
-
-case object EndSymbol extends EndSymbolData with H264SourceData
-
-trait GB28181SourceData extends ISourceData
-
-case class GB28181H264DataData(bytes: Array[Byte]) extends GB28181SourceData

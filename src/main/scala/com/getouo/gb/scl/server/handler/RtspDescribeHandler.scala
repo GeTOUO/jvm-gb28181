@@ -28,7 +28,13 @@ class RtspDescribeHandler extends SimpleChannelInboundHandler[RtspDescribeReques
         sourceId match {
           case FileSourceId(file, setupTime) =>
             val info = loadSdp(i.url, ctx.channel())
-            ctx.writeAndFlush(i.defaultResponse(info))
+            val response = i.defaultResponse(info)
+            logger.info(
+              s"""
+                 |file source resp descript:
+                 |${response.sdpStr}
+                 |""".stripMargin)
+            ctx.writeAndFlush(response)
           case gid@GBSourceId(deviceId, channelId, setupTime) =>
             GB28181PlayStream.byIdOpt(gid) match {
               case None =>
@@ -36,7 +42,29 @@ class RtspDescribeHandler extends SimpleChannelInboundHandler[RtspDescribeReques
                 ctx.writeAndFlush(i.resp404(s"设备【$deviceId】未加载或未开始点播"))
               case Some(playStream) =>
                 val sdpStr = playStream.source.sdpInfo.get()
-                val resp = i.defaultResponse(loadGBSdp(sdpStr, ctx.channel()))
+
+                val sssss =
+                  s"""v=0
+                     |o=- 1598340699175012 1 IN IP4 192.168.2.19
+                     |t=0 0
+                     |a=contol:*
+                     |m=video 0 RTP/AVP 96
+                     |a=rtpmap:96 MP2P/90000
+                     |a=framerate:25
+                     |a=control:trackID=0
+                     |
+                     |""".stripMargin
+                val str = loadGBSdp(sdpStr, ctx.channel())
+                val sdpStr2 = loadSdp("", ctx.channel())
+                logger.info(
+                  s"""
+                     |playStream.source.sdpInfo:
+                     |$str
+                     |-----------------------------
+                     |playStream.source.sdpInfo:
+                     |$sdpStr2
+                     |""".stripMargin)
+                val resp = i.defaultResponse(sssss)
                 ctx.writeAndFlush(resp)
             }
           case _ =>
@@ -82,6 +110,7 @@ class RtspDescribeHandler extends SimpleChannelInboundHandler[RtspDescribeReques
     val localIp: String = ChannelUtil.localIp(channel)
     val targetIp: String = ChannelUtil.remoteIp(channel)
     var buf = sdpStr
+    buf = buf.replace("TCP/RTP/AVP", "RTP/AVP")
     val buffer = Buffers.wrap(sdpStr)
     while (buffer.hasReadableBytes) {
       val lineKV = buffer.readLine().toString.split("=")
@@ -103,13 +132,12 @@ class RtspDescribeHandler extends SimpleChannelInboundHandler[RtspDescribeReques
     val file = new File(s"/$sourceName")
     val upCaseName = sourceName.toUpperCase
     if ((upCaseName.endsWith(".H264") || upCaseName.endsWith(".264")) && file.exists()) {
-      Some(FileSourceId(file.getName, System.currentTimeMillis()))
+      Some(FileSourceId(file.getCanonicalPath, System.currentTimeMillis()))
     } else {
       SpringContextUtil.getBean[DeviceService](clazz = classOf[DeviceService]) match {
         case None => throw new Exception(s"无法获取 DeviceService")
         case Some(service) => service.findDevice(sourceName).map(device => GBSourceId(device.id, device.id))
       }
     }
-
   }
 }

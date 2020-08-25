@@ -1,6 +1,6 @@
 package com.getouo.gb.scl.stream
 
-import com.getouo.gb.scl.io.{H264NaluData, H264SourceData}
+import com.getouo.gb.scl.data.{H264NaluData, H264SourceData}
 
 import scala.concurrent.ExecutionContext
 

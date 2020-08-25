@@ -3,7 +3,7 @@ package com.getouo.gb.scl.rtp
 import java.net.InetSocketAddress
 import java.util.concurrent.atomic.AtomicInteger
 
-import com.getouo.gb.scl.io.H264NaluData
+import com.getouo.gb.scl.data.H264NaluData
 import com.getouo.gb.scl.stream.{ConsumptionPipeline, SourceConsumer}
 import com.getouo.gb.scl.util.LogSupport
 import io.netty.buffer.Unpooled
@@ -17,7 +17,6 @@ class H264RtpConsumer extends SourceConsumer[H264NaluData] with LogSupport {
   private var timestamp: Int = 0
   private val framerate: Float = 25
   private val timestampIncrement: Int = (90000 / framerate).intValue() //+0.5
-
 
   var count = 0
 

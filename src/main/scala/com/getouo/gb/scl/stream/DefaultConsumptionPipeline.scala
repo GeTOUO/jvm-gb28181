@@ -1,6 +1,6 @@
 package com.getouo.gb.scl.stream
 
-import com.getouo.gb.scl.io.ISourceData
+import com.getouo.gb.scl.data.ISourceData
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}

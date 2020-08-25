@@ -2,12 +2,14 @@ package com.getouo.gb.scl.io
 
 import java.io.{FileInputStream, FileNotFoundException}
 
+import com.getouo.gb.scl.data.{ByteSourceData, EndSymbol, ErrorSourceData, ISourceData}
+
 import scala.util.{Failure, Success, Try}
 
 @throws[FileNotFoundException]
 class SingleFileSource(fileName: String) extends UnActiveSource[ISourceData] {
 
-  private var fis: FileInputStream = _
+  private var fis: FileInputStream = new FileInputStream(fileName)
 
   override final def produce(): ISourceData = read()
 

@@ -3,6 +3,7 @@ package com.getouo.gb.scl.io
 import java.io.{FileInputStream, FileNotFoundException}
 import java.util.concurrent.atomic.AtomicBoolean
 
+import com.getouo.gb.scl.data.{ByteSourceData, EndSymbol, EndSymbolData, ErrorSourceData, H264NaluData, H264SourceData}
 import com.getouo.gb.scl.util.H264NALUFramer
 import com.getouo.gb.scl.util.H264NALUFramer.StepInfo
 
