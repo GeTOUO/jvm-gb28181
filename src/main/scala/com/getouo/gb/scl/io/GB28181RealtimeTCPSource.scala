@@ -3,7 +3,7 @@ package com.getouo.gb.scl.io
 import java.util.concurrent.ConcurrentLinkedDeque
 import java.util.concurrent.atomic.AtomicReference
 
-import com.getouo.gb.scl.data.{PSH264Data, PSH264IFrame, PSH264PFrame}
+import com.getouo.gb.scl.data.{PSH264Data, PSH264IFrame, PSH264PFrame, PSHeaders}
 import com.getouo.gb.scl.rtp.RtpHeader
 import com.getouo.gb.scl.server.RealtimeMediaStreamServer
 import com.getouo.gb.scl.util.{ByteLoserReader, ChannelUtil}
@@ -48,8 +48,10 @@ class GB28181RealtimeTCPSource() extends ChannelInboundHandlerAdapter with Activ
     val rtpHeader = RtpHeader(loserReader.take(12).toArray)
     val sequenceNumber = rtpHeader.sequenceNumber
 
-    val hasPSHeader = loserReader.matcher(0, PSH264Data.PS_HEADER)
-    val isAudio = loserReader.matcher(0, PSH264Data.PS_AUDIO_PES_HEADER)
+    println(PSHeaders)
+    println(PSHeaders.PS_HEADER.toSeq)
+    val hasPSHeader = loserReader.matcher(0, PSHeaders.PS_HEADER)
+    val isAudio = loserReader.matcher(0, PSHeaders.PS_AUDIO_PES_HEADER)
 
     if (totalLength > 18 && hasPSHeader) { // 有ps头,进一步判断是否是i帧或者p帧
       //      val psHeader = loserReader.take(14)
@@ -59,7 +61,7 @@ class GB28181RealtimeTCPSource() extends ChannelInboundHandlerAdapter with Activ
 
       // ps 头前14字节是固定的， [第14字节 & 0x07] = 得到扩展的长度
       val sysHeaderStartIndex = 14 + (loserReader(13) & 0x07)
-      val isIFrame = loserReader.length > 13 && loserReader.matcher(sysHeaderStartIndex, PSH264Data.PS_SYSTEM_HEADER_I_FRAME)
+      val isIFrame = loserReader.length > 13 && loserReader.matcher(sysHeaderStartIndex, PSHeaders.PS_SYSTEM_HEADER_I_FRAME)
 
       if (isIFrame) {
         loserReader.drop(sysHeaderStartIndex + 4) // 丢弃 system header tag及之前的数据
@@ -76,15 +78,15 @@ class GB28181RealtimeTCPSource() extends ChannelInboundHandlerAdapter with Activ
         loadIFrameH264(loserReader, iFrame)
         frameDeque.add(iFrame)
 
-        logger.info(
-          s"""
-             |一个iiiiiiiiiiiiiiiiiii帧数据:----------------------------------
-             |总数据包长度=$totalLength; 剩余reader长度=${loserReader.toArray.length}; 接下来8个byte: ${loserReader.take(8).map(_.toHexString).toSeq}
-             |
-             |::
-             |${BytesPrinter.toStr(arrayBuf)}
-             |::::::::::::::::::::::::::::::::::::::
-             |""".stripMargin)
+//        logger.info(
+//          s"""
+//             |一个iiiiiiiiiiiiiiiiiii帧数据:----------------------------------
+//             |总数据包长度=$totalLength; 剩余reader长度=${loserReader.toArray.length}; 接下来8个byte: ${loserReader.take(8).map(_.toHexString).toSeq}
+//             |
+//             |::
+//             |${BytesPrinter.toStr(arrayBuf)}
+//             |::::::::::::::::::::::::::::::::::::::
+//             |""".stripMargin)
 
       } else {
         loserReader.take(sysHeaderStartIndex) // 丢弃 ps header tag
@@ -92,11 +94,20 @@ class GB28181RealtimeTCPSource() extends ChannelInboundHandlerAdapter with Activ
         loadPFrameH264(loserReader, pFrame)
         frameDeque.add(pFrame)
 
-        logger.info(
-          s"""
-             |一个p帧数据:
-             |总数据包长度=$totalLength; 剩余reader长度=${loserReader.toArray.length}; 接下来8个byte: ${loserReader.take(8).toSeq}
-             |""".stripMargin)
+        val toP = pFrame.getArray.map(p =>
+          s""":::::::::::
+             |${BytesPrinter.toStr(p)}
+             |:::::::
+             |""".stripMargin).reduce((a,b) => a + b)
+
+//        logger.info(
+//          s"""
+//             |一个p帧数据:
+//             |总数据包长度=$totalLength; 剩余reader长度=${loserReader.toArray.length}; 接下来8个byte: ${loserReader.take(8).toSeq}
+//             |::0000000000000000000000000000
+//             |$toP
+//             |::0000000000000000000000000000
+//             |""".stripMargin)
       }
 
     } else if (totalLength > 18 && isAudio) { // 音频
@@ -110,15 +121,17 @@ class GB28181RealtimeTCPSource() extends ChannelInboundHandlerAdapter with Activ
         val last = frameDeque.getLast
         last match {
           case frame: PSH264IFrame =>
-            frame.addBytes(loserReader.drop(14).toArray)
+            frame.addLast(loserReader.drop(14).toArray)
+          case frame: PSH264PFrame =>
+            frame.addLast(loserReader.drop(14).toArray)
           case _ =>
         }
+//        logger.info(
+//          s"""
+//             |分包数据: 类型：${last.getClass}
+//             |总数据包长度=$totalLength;
+//             |""".stripMargin)
       }
-      logger.info(
-        s"""
-           |分包数据:
-           |总数据包长度=$totalLength;
-           |""".stripMargin)
     }
 
     while (frameDeque.size() > 1) {
@@ -132,7 +145,7 @@ class GB28181RealtimeTCPSource() extends ChannelInboundHandlerAdapter with Activ
   }
 
   private def loadPFrameH264(reader: ByteLoserReader, frame: PSH264PFrame): Unit = {
-    while (reader.indexOfSlice(PSH264Data.PS_VIDEO_PES_HEADER) == 0) {
+    while (reader.indexOfSlice(PSHeaders.PS_VIDEO_PES_HEADER) == 0) {
       reader.drop(4)
       val pesPayloadLen = Buffers.wrap(reader.take(2).toArray).readUnsignedShort() // header tag后两个字节的长度，
       val pesHeaderLen = reader(2) & 0xFF
@@ -143,7 +156,7 @@ class GB28181RealtimeTCPSource() extends ChannelInboundHandlerAdapter with Activ
   }
 
   private def loadIFrameH264(reader: ByteLoserReader, frame: PSH264IFrame): Unit = {
-    while (reader.indexOfSlice(PSH264Data.PS_VIDEO_PES_HEADER) == 0) {
+    while (reader.indexOfSlice(PSHeaders.PS_VIDEO_PES_HEADER) == 0) {
       reader.drop(4)
       val pesPayloadLen = Buffers.wrap(reader.take(2).toArray).readUnsignedShort() // header tag后两个字节的长度，
       val pesHeaderLen = reader(2) & 0xFF

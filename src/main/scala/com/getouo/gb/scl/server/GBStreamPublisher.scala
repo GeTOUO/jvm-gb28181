@@ -1,8 +1,11 @@
 package com.getouo.gb.scl.server
 
-import com.getouo.gb.scl.data.PSH264IFrame
+import java.util.concurrent.atomic.AtomicInteger
+
+import com.getouo.gb.scl.data.{H264NaluData, PSH264Audio, PSH264Data, PSH264IFrame, PSH264PFrame}
 import com.getouo.gb.scl.stream.{ConsumptionPipeline, SourceConsumer}
 import com.getouo.gb.scl.util.ChannelUtil
+import com.getouo.gb.util.BytesPrinter
 import io.netty.bootstrap.ServerBootstrap
 import io.netty.buffer.Unpooled
 import io.netty.channel.ChannelHandler.Sharable
@@ -17,7 +20,7 @@ import io.netty.util.concurrent.GlobalEventExecutor
 import scala.util.{Failure, Success, Try}
 
 @Sharable
-class GBStreamPublisher extends ChannelInboundHandlerAdapter with Runnable with SourceConsumer[PSH264IFrame]{
+class GBStreamPublisher extends ChannelInboundHandlerAdapter with Runnable with SourceConsumer[PSH264Data]{
 
   val thisHandler: GBStreamPublisher = this
   val actors: ChannelGroup = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE)
@@ -79,20 +82,72 @@ class GBStreamPublisher extends ChannelInboundHandlerAdapter with Runnable with 
   val channel: Channel = whileTryPort(b, 10000).channel()
   val localPort: Int = ChannelUtil.castSocketAddr(channel.localAddress()).getPort
 
-  override def onNext(pipeline: ConsumptionPipeline[_, PSH264IFrame], data: PSH264IFrame): Unit = {
 
+  private val sendSeq: AtomicInteger = new AtomicInteger(0)
+  private var timestamp: Int = 0
+  private val framerate: Float = 25
+  private val timestampIncrement: Int = (90000 / framerate).intValue() //+0.5
 
-    tcpSubscriber.writeAndFlush(Unpooled.copiedBuffer(data.bytes))
+  override def onNext(pipeline: ConsumptionPipeline[_, PSH264Data], data: PSH264Data): Unit = {
+
+    data match {
+      case iFrame@PSH264IFrame(pts, _) =>
+        iFrame.getArray.foreach(da => {
+          timestamp += timestampIncrement
+          val packets = H264NaluData(4, da.drop(4)).rtpPacket(sendSeq, timestamp)
+
+          packets.map(p => {
+            val tcpHeader = new Array[Byte](4)
+            tcpHeader(0) = '$'
+            tcpHeader(1) = 0
+            tcpHeader(2) = ((p.length & 0xFF00) >> 8).byteValue()
+            tcpHeader(3) = (p.length & 0xFF).byteValue()
+            val bytes = tcpHeader ++ p
+            logger.info(
+              s"""
+                 |发送I帧: 前128:
+                 |${BytesPrinter.toStr(bytes.take(128))}
+                 |""".stripMargin)
+            tcpSubscriber.writeAndFlush(Unpooled.copiedBuffer(bytes))
+          })
+        })
+//        tcpSubscriber.writeAndFlush(Unpooled.copiedBuffer(data.bytes))
+      case pFrame@PSH264PFrame(pts, _) =>
+        pFrame.getArray.foreach(da => {
+          timestamp += timestampIncrement
+          val packets = H264NaluData(4, da.drop(4)).rtpPacket(sendSeq, timestamp)
+
+          packets.map(p => {
+            val tcpHeader = new Array[Byte](4)
+            tcpHeader(0) = '$'
+            tcpHeader(1) = 0
+            tcpHeader(2) = ((p.length & 0xFF00) >> 8).byteValue()
+            tcpHeader(3) = (p.length & 0xFF).byteValue()
+            val bytes = tcpHeader ++ p
+            logger.info(
+              s"""
+                 |发送P帧: 前128:
+                 |${BytesPrinter.toStr(bytes.take(128))}
+                 |""".stripMargin)
+            tcpSubscriber.writeAndFlush(Unpooled.copiedBuffer(bytes))
+          })
+        })
+
+      case PSH264Audio() =>
+      case _ =>
+    }
+
+//    tcpSubscriber.writeAndFlush(Unpooled.copiedBuffer(data.bytes))
 //    tcpSubscriber.
 
 //    actors.writeAndFlush(Unpooled.copiedBuffer(data.bytes))
   }
 
-  override def onError(pipeline: ConsumptionPipeline[_, PSH264IFrame], thr: Throwable): Unit = {
+  override def onError(pipeline: ConsumptionPipeline[_, PSH264Data], thr: Throwable): Unit = {
     logger.error(s"on error $thr")
   }
 
-  override def onComplete(pipeline: ConsumptionPipeline[_, PSH264IFrame]): Unit = {
+  override def onComplete(pipeline: ConsumptionPipeline[_, PSH264Data]): Unit = {
     logger.info(s"onComplete")
   }
 }

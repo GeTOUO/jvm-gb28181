@@ -37,7 +37,8 @@ class DeviceService(redis: RedisService, udpServer: SipUdpServer, platCfg: PlatC
           case Some(conn) =>
 
             //            val localIp = conn.getLocalIpAddress
-            val localIp = "192.168.2.19"
+//            val localIp = "192.168.2.19"
+            val localIp = "192.168.199.237"
             val sourceId = GBSourceId(id, id)
             getPlayStream(sourceId)
 
@@ -53,7 +54,7 @@ class DeviceService(redis: RedisService, udpServer: SipUdpServer, platCfg: PlatC
                  |-------playMessage
                  |$playMessage""".stripMargin)
             conn.send(playMessage)
-            s"rtsp://192.168.2.19:${consumer.localPort}"
+            s"rtsp://$localIp:${consumer.localPort}"
         }
     }
   }

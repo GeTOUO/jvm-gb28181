@@ -117,7 +117,7 @@ abstract class ActivePlayStream[ID <: SourceId, S <: ActiveSource[IN], IN <: ISo
 
 
 class GB28181PlayStream(val id: GBSourceId, val source: GB28181RealtimeTCPSource, pipeline: GB28181ConsumptionPipeline)
-  extends ActivePlayStream[GBSourceId, GB28181RealtimeTCPSource, PSH264Data, PSH264IFrame](source, pipeline) {
+  extends ActivePlayStream[GBSourceId, GB28181RealtimeTCPSource, PSH264Data, PSH264Data](source, pipeline) {
   override protected def onStop(): Unit = GB28181PlayStream.groups.remove(this.id)
 }
 

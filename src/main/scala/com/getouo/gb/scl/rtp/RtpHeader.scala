@@ -3,6 +3,7 @@ package com.getouo.gb.scl.rtp
 import java.nio.ByteBuffer
 
 import com.getouo.gb.util.{ByteBitAccessor, LongBitAccessor}
+import io.pkts.buffer.{Buffer, Buffers}
 
 /*
  *
@@ -22,14 +23,15 @@ import com.getouo.gb.util.{ByteBitAccessor, LongBitAccessor}
  */
 case class RtpHeader(bytes: Array[Byte]) {
   if (bytes.length != 12) throw new RuntimeException("RtpHeader header size must = 12, but error: " + bytes.length)
-  private val buffer: ByteBuffer = ByteBuffer.wrap(bytes)
-  private val byte0: Byte = buffer.get() // csrcLen:4; extension:1; padding:1; version:2
-  private val byte1: Byte = buffer.get() // payloadType:7; marker:1;
+//  private val buffer: ByteBuffer = ByteBuffer.wrap(bytes)
+  private val buffer: Buffer = Buffers.wrap(bytes)
+  private val byte0: Byte = buffer.readByte() // csrcLen:4; extension:1; padding:1; version:2
+  private val byte1: Byte = buffer.readByte() // payloadType:7; marker:1;
 
-  val sequenceNumber: Short = buffer.getShort()
+  val sequenceNumber: Int = buffer.readUnsignedShort()
   if (sequenceNumber < 0) throw new RuntimeException("sequenceNumber < 0 error")
-  val timestamp: Int = buffer.getInt()
-  val ssrcIdentifier: Int = buffer.getInt()
+  val timestamp: Long = buffer.readUnsignedInt()
+  val ssrcIdentifier: Long = buffer.readUnsignedInt()
 
   val version: Int = byte0 >> 6
   val padding: Boolean = ByteBitAccessor.hasBit(byte0, RtpHeader.bitByte(5))

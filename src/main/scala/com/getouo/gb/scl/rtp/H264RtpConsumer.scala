@@ -6,6 +6,7 @@ import java.util.concurrent.atomic.AtomicInteger
 import com.getouo.gb.scl.data.H264NaluData
 import com.getouo.gb.scl.stream.{ConsumptionPipeline, SourceConsumer}
 import com.getouo.gb.scl.util.LogSupport
+import com.getouo.gb.util.BytesPrinter
 import io.netty.buffer.Unpooled
 import io.netty.channel.socket.DatagramPacket
 import io.netty.util.ReferenceCountUtil
@@ -39,7 +40,13 @@ class H264RtpConsumer extends SourceConsumer[H264NaluData] with LogSupport {
       tcpHeader(1) = 0
       tcpHeader(2) = ((p.length & 0xFF00) >> 8).byteValue()
       tcpHeader(3) = (p.length & 0xFF).byteValue()
-      tcpSubscriber.writeAndFlush(Unpooled.copiedBuffer(tcpHeader ++ p))
+      val bytes = tcpHeader ++ p
+      logger.info(
+        s"""
+           |发送 file 帧: 前128:
+           |${BytesPrinter.toStr(bytes.take(128))}
+           |""".stripMargin)
+      tcpSubscriber.writeAndFlush(Unpooled.copiedBuffer(bytes))
     })
   }
 

@@ -7,6 +7,7 @@ import io.pkts.buffer.Buffers
 
 trait PSH264Data extends ISourceData
 
+class PSHeaders
 /**
  *
  * PS流传输格式:
@@ -15,13 +16,19 @@ trait PSH264Data extends ISourceData
  * 3、音频帧的封装: RTP + PES header + G711
  *
  */
-object PSH264Data {
+object PSHeaders {
   val PS_HEADER: Array[Byte] = ByteBuffer.allocate(4).putInt(0x000001BA).array()
   val PS_SYSTEM_HEADER_I_FRAME: Array[Byte] = ByteBuffer.allocate(4).putInt(0x000001BB).array()
   val PS_SYSTEM_MAP: Array[Byte] = ByteBuffer.allocate(4).putInt(0x000001BC).array()
-  val PS_PES_HEADER: Array[Byte] = ByteBuffer.allocate(3).putInt(0x000001).array()
+  val PS_PES_HEADER: Array[Byte] = ByteBuffer.wrap(Array[Byte](0x00, 0x00, 0x01)).array()
   val PS_VIDEO_PES_HEADER: Array[Byte] = ByteBuffer.allocate(4).putInt(0x000001E0).array()
 //  val PS_P_FRAME_HEADER: Array[Byte] = ByteBuffer.allocate(4).putInt(0x000001BA).array()
   val PS_AUDIO_PES_HEADER: Array[Byte] = ByteBuffer.allocate(4).putInt(0x000001C0).array()
 
+  def main(args: Array[String]): Unit = {
+    println(
+
+    PSHeaders.getClass
+    )
+  }
 }
