@@ -80,6 +80,8 @@ class GBStreamPublisher extends ChannelInboundHandlerAdapter with Runnable with 
   val localPort: Int = ChannelUtil.castSocketAddr(channel.localAddress()).getPort
 
   override def onNext(pipeline: ConsumptionPipeline[_, PSH264IFrame], data: PSH264IFrame): Unit = {
+
+
     tcpSubscriber.writeAndFlush(Unpooled.copiedBuffer(data.bytes))
 //    tcpSubscriber.
 

@@ -5,7 +5,7 @@ import java.util.Arrays;
 public class BytesPrinter {
     public static final String NEWLINE = System.getProperty("line.separator", "\n");
 
-    private static String[] colIndex = {"00","01","02","03","04","05","06","07", " ", "08","09","10","11","12","13","14","15"};
+    private static String[] colIndex = {"00","01","02","03","04","05","06","07", "", "08","09","10","11","12","13","14","15"};
 
     public static String toStr(final byte[] bytes) {
         if (bytes == null) return "";
@@ -36,7 +36,7 @@ public class BytesPrinter {
     }
 
     private static String rowIndex(int i) {
-        Integer in = (i + 1) * 16;
+        Integer in = (i / 16 + 1) * 16;
         StringBuilder builder = new StringBuilder(in.toString());
         while (builder.length() < 8) {
             builder.insert(0, "0");

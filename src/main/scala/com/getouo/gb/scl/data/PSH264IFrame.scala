@@ -1,14 +1,23 @@
 package com.getouo.gb.scl.data
 
-import io.pkts.buffer.Buffers
+case class PSH264IFrame(val pts: Long, private val arr: Array[Byte] = Array.empty) extends PSH264Data {
+  private var bytes = arr
+  def addBytes(arr: Array[Byte]): PSH264IFrame = {
+    this.bytes ++= arr
+    this
+  }
 
-case class PSH264IFrame(bytes: Array[Byte]) extends PSH264Data {
-  val version: Int = Buffers.wrap(bytes.take(2)).readUnsignedShort()
-
+  def getArray: Array[Byte] = bytes
 }
 
-case class PSH264PFrame(bytes: Array[Byte]) extends PSH264Data {
+case class PSH264PFrame(val pts: Long, private val arr: Array[Byte] = Array.empty) extends PSH264Data {
+  private var bytes = arr
+  def addBytes(arr: Array[Byte]): PSH264PFrame = {
+    this.bytes ++= arr
+    this
+  }
 
+  def getArray: Array[Byte] = bytes
 }
 
 case class PSH264Audio() extends PSH264Data {
