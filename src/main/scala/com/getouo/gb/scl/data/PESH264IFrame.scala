@@ -9,18 +9,35 @@ import scala.collection.mutable.ArrayBuffer
 //class PESFrame extends PSH264Data with H264NALUFramer {
 class PESFrame extends PSH264Data {
 
-//  private var payload: ArrayBuffer[Byte] = ArrayBuffer.empty
-  private var payload: ArrayBuffer[(Long, H264NaluData)] = ArrayBuffer.empty
+  private val payload: ArrayBuffer[Byte] = ArrayBuffer.empty
+//  private var payload: ArrayBuffer[(Long, H264NaluData)] = ArrayBuffer.empty
 
-//  def addBytes(arr: Array[Byte]): Unit = this.payload.addAll(arr)
-  def addBytes(arr: (Long, H264NaluData)): Unit = this.payload.addOne(arr)
+  def addBytes(arr: Array[Byte]): Unit = this.payload.addAll(arr)
+//  def addBytes(arr: (Long, H264NaluData)): Unit = this.payload.addOne(arr)
 
-  def addLastBytes(arr: Array[Byte]): Unit = {
-    val last = this.payload.last
-    this.payload.update(this.payload.length - 1, last.copy(_2 = last._2.copy(nalu = last._2.nalu ++ arr)))
+//  def addLastBytes(arr: Array[Byte]): Unit = {
+//    val last = this.payload.last
+//    this.payload.update(this.payload.length - 1, last.copy(_2 = last._2.copy(nalu = last._2.nalu ++ arr)))
+//  }
+
+  def getNalus: Array[H264NaluData] = {
+    val result: ArrayBuffer[H264NaluData] = ArrayBuffer.empty
+
+    var sourceData = payload.toArray
+    var lastTLen = -1
+    var optSetp = H264NALUFramer.nextUnit(sourceData)
+    while (optSetp.isDefined) {
+      val setp = optSetp.get
+      if (lastTLen != -1) result.addOne(setp.data.asInstanceOf[H264NaluData].copy(startCodeLen = lastTLen))
+      lastTLen = setp.nextStartTagLen
+      sourceData = setp.leftover
+      optSetp = H264NALUFramer.nextUnit(sourceData)
+    }
+    if (sourceData.nonEmpty && lastTLen != -1) {
+      result.addOne(H264NaluData(lastTLen, sourceData))
+    }
+    result.toArray
   }
-
-  def getNalus: Array[(Long, H264NaluData)] = payload.toArray
 
 //  def getArray: Array[Byte] = this.payload.toArray
 //  def getArray: Array[Byte] = this.payload.ma.toArray

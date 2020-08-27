@@ -110,21 +110,26 @@ class GB28181RealtimeTCPSource() extends ChannelInboundHandlerAdapter with Activ
       }
 
     } else if (totalLength > 18 && isAudio) { // 音频
-      logger.info(
-        s"""
-           |音频数据:
-           |总数据包长度=$totalLength;
-           |""".stripMargin)
+//      logger.info(
+//        s"""
+//           |音频数据:
+//           |总数据包长度=$totalLength;
+//           |""".stripMargin)
     } else { // 分包
       //      val tailPacket = loserReader.drop(14).toArray
       val tailPacket = loserReader.toArray
       if (frameDeque.size() > 0) {
         frameDeque.getLast match {
           case frame: PESFrame =>
-            frame.addLastBytes(tailPacket)
+            frame.addBytes(tailPacket)
           case PSH264Audio() =>
           case _ =>
         }
+
+        H264NALUFramer.nextUnit(tailPacket).foreach(ne => {
+          logger.info(s"分包数据具有 nalu 分段 ${ne.nextStartTagLen}")
+        })
+
         //        logger.info(
         //          s"""
         //             |分包数据: ${tailPacket.length}
@@ -157,23 +162,25 @@ class GB28181RealtimeTCPSource() extends ChannelInboundHandlerAdapter with Activ
       val remainH264Length = pesPayloadLen - 3 - pesHeaderLen
 
       val naluArray = reader.take(remainH264Length).toArray
+      frame.addBytes(naluArray)
 
-      var naluArrayBuf = naluArray
-      var maybeInfo = H264NALUFramer.nextUnit(naluArrayBuf)
 
-      var counrrr = 0
-      while (maybeInfo.isDefined) {
-        val setp = maybeInfo.get
-        if (setp.nextStartTagLen == 3) {
-
-          System.err.println(s"第$counrrr ge nalu tag=${setp.nextStartTagLen}")
-        }
-        maybeInfo = H264NALUFramer.nextUnit(setp.leftover)
-        //        naluArray.indexOfSlice(START_TAG4)
-      }
-
-      val len = if (naluArray.indexOfSlice(START_TAG4) == 0) 4 else 3
-      frame.addBytes((pts, H264NaluData(len, naluArray.drop(len))))
+//      var naluArrayBuf = naluArray
+//      var maybeInfo = H264NALUFramer.nextUnit(naluArrayBuf)
+//
+//      var counrrr = 0
+//      while (maybeInfo.isDefined) {
+//        val setp = maybeInfo.get
+//        if (setp.nextStartTagLen == 3) {
+//
+//          System.err.println(s"第$counrrr ge nalu tag=${setp.nextStartTagLen}")
+//        }
+//        maybeInfo = H264NALUFramer.nextUnit(setp.leftover)
+//        //        naluArray.indexOfSlice(START_TAG4)
+//      }
+//
+//      val len = if (naluArray.indexOfSlice(START_TAG4) == 0) 4 else 3
+//      frame.addBytes(H264NaluData(len, naluArray.drop(len)))
       pesStartIndex = reader.indexOfSlice(PSHeaders.PS_VIDEO_PES_HEADER)
     }
   }

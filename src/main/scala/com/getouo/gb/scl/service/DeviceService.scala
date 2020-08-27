@@ -8,6 +8,7 @@ import com.getouo.gb.scl.model.GBDevice
 import com.getouo.gb.scl.server.{GBStreamPublisher, SipUdpServer}
 import com.getouo.gb.scl.sip.SipMessageTemplate
 import com.getouo.gb.scl.stream.{GB28181ConsumptionPipeline, GB28181PlayStream, GBSourceId}
+import com.getouo.gb.scl.util.NetAddressUtil
 import org.springframework.stereotype.Service
 
 import scala.util.{Failure, Success, Try}
@@ -37,7 +38,9 @@ class DeviceService(redis: RedisService, udpServer: SipUdpServer, platCfg: PlatC
           case Some(conn) =>
 
             //            val localIp = conn.getLocalIpAddress
-            val localIp = "192.168.2.19"
+
+            val localIp = NetAddressUtil.localAddress.getHostAddress
+
 //            val localIp = "192.168.199.237"
             val sourceId = GBSourceId(id, id)
             getPlayStream(sourceId)

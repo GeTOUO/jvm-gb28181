@@ -91,9 +91,8 @@ class GBStreamPublisher extends ChannelInboundHandlerAdapter with Runnable with 
   private val timestampIncrement: Int = (90000 / framerate).intValue() //+0.5
 
   def tcpSend(lo: Long, data: H264NaluData): Unit = {
-    timestamp = timestamp + 3600
+    timestamp = timestamp + timestampIncrement
 //    timestamp = lo.toInt
-    logger.info(s"timestamp=$lo")
     val packets = data.rtpPacket(sendSeq, timestamp)
     packets.foreach(p => {
       val tcpHeader = Array[Byte]('$', 0x00, ((p.length & 0xFF00) >> 8).byteValue(), (p.length & 0xFF).byteValue())
@@ -110,26 +109,26 @@ class GBStreamPublisher extends ChannelInboundHandlerAdapter with Runnable with 
   override def onNext(pipeline: ConsumptionPipeline[_, PSH264Data], data: PSH264Data): Unit = {
     count+=1
 
-//    if (writeable && data.isInstanceOf[PESFrame]) {
-//      file.write(data.asInstanceOf[PESFrame].getNalus.map(n => {
-//        new Array[Byte](n._2.startCodeLen) ++ n._2.nalu
-//      }).reduce((a, b) => a ++ b))
-//    } else {
-//      Try(file.close()) match {
-//        case Failure(exception) => exception.printStackTrace()
-//        case Success(value) =>
-//      }
-//    }
+    if (writeable && data.isInstanceOf[PESFrame]) {
+      file.write(data.asInstanceOf[PESFrame].getNalus.map(n => {
+        new Array[Byte](n.startCodeLen) ++ n.nalu
+      }).reduce((a, b) => a ++ b))
+    } else {
+      Try(file.close()) match {
+        case Failure(exception) => exception.printStackTrace()
+        case Success(value) =>
+      }
+    }
     data match {
       case frame: PESFrame =>
-        frame.getNalus.foreach{ case (l, n) => {
+        frame.getNalus.foreach{ case n => {
           if (n.nalUnitType == 7) {
             if (count > 1000) writeable = false
             System.err.println(tcpSubscriber.size())
             tcpSubscriber.forEach(c => actors.add(c))
             tcpSubscriber.clear()
           }
-          tcpSend(l, n)
+          tcpSend(0, n)
         }}
 
 //        frame.getNalus.foreach(n => {
