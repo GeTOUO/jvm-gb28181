@@ -21,9 +21,16 @@ class H264RtpConsumer extends SourceConsumer[H264NaluData] with LogSupport {
 
   var count = 0
 
+  var toI = false
   override def onNext(pipeline: ConsumptionPipeline[_, H264NaluData], data: H264NaluData): Unit = {
     timestamp += timestampIncrement
     count += 1
+
+    println(s"hhh nalUnitType=${data.nalUnitType}")
+//    throw new RuntimeException
+//    if (count < 3) return
+    if (data.nalUnitType == 1 && count < 100) return
+//    println(s"hhh $count")
     val packets = data.rtpPacket(sendSeq, timestamp)
     packets.map(Unpooled.copiedBuffer).foreach(bf => {
       udpSubscriber.foreach { case (channel, subscribers) =>

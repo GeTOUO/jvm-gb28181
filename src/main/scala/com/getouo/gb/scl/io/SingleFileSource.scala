@@ -13,8 +13,6 @@ class SingleFileSource(fileName: String) extends UnActiveSource[ISourceData] {
 
   override final def produce(): ISourceData = read()
 
-
-
   private def read(buf: Array[Byte] = new Array[Byte](1024 * 8)): ISourceData = {
     Try(fis.read(buf)) match {
       case Failure(exception) => Try(fis.close()); ErrorSourceData(exception)

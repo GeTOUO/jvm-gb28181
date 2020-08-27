@@ -64,7 +64,7 @@ class RtspDescribeHandler extends SimpleChannelInboundHandler[RtspDescribeReques
                      |playStream.source.sdpInfo:
                      |$sdpStr2
                      |""".stripMargin)
-                val resp = i.defaultResponse(sssss)
+                val resp = i.defaultResponse(sdpStr2)
                 ctx.writeAndFlush(resp)
             }
           case _ =>
