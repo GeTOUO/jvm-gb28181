@@ -1,6 +1,7 @@
 package com.getouo.gb.scl.server
 
 import java.io.{File, RandomAccessFile}
+import java.net.InetSocketAddress
 import java.util.concurrent.atomic.AtomicInteger
 
 import com.getouo.gb.scl.data.{H264NaluData, PESFrame, PSH264Audio, PSH264Data}
@@ -12,7 +13,7 @@ import io.netty.channel.ChannelHandler.Sharable
 import io.netty.channel._
 import io.netty.channel.group.{ChannelGroup, DefaultChannelGroup}
 import io.netty.channel.nio.NioEventLoopGroup
-import io.netty.channel.socket.SocketChannel
+import io.netty.channel.socket.{DatagramPacket, SocketChannel}
 import io.netty.channel.socket.nio.NioServerSocketChannel
 import io.netty.util.ReferenceCountUtil
 import io.netty.util.concurrent.{Future, GlobalEventExecutor}
@@ -20,13 +21,13 @@ import io.netty.util.concurrent.{Future, GlobalEventExecutor}
 import scala.util.{Failure, Success, Try}
 
 @Sharable
-class GBStreamPublisher extends ChannelInboundHandlerAdapter with Runnable with SourceConsumer[PSH264Data]{
+class GBStreamPublisher extends ChannelInboundHandlerAdapter with Runnable with SourceConsumer[PSH264Data] {
 
   val thisHandler: GBStreamPublisher = this
   val actors: ChannelGroup = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE)
 
   override def channelActive(ctx: ChannelHandlerContext): Unit = {
-//    actors.add(ctx.channel())
+    //    actors.add(ctx.channel())
     logger.info(s"GBStreamPublisher channelActive ${ctx.channel().remoteAddress()}")
     tcpJoin(ctx.channel())
   }
@@ -91,55 +92,67 @@ class GBStreamPublisher extends ChannelInboundHandlerAdapter with Runnable with 
   private val timestampIncrement: Int = (90000 / framerate).intValue() //+0.5
 
   def tcpSend(lo: Long, data: H264NaluData): Unit = {
-    timestamp = timestamp + timestampIncrement
-//    timestamp = lo.toInt
+//    timestamp = timestamp + timestampIncrement
+    timestamp = timestamp + 3600
+    //    timestamp = lo.toInt
     val packets = data.rtpPacket(sendSeq, timestamp)
     packets.foreach(p => {
       val tcpHeader = Array[Byte]('$', 0x00, ((p.length & 0xFF00) >> 8).byteValue(), (p.length & 0xFF).byteValue())
-//      tcpSubscriber.writeAndFlush(Unpooled.copiedBuffer(tcpHeader ++ p))
+      //      tcpSubscriber.writeAndFlush(Unpooled.copiedBuffer(tcpHeader ++ p))
 
       actors.writeAndFlush(Unpooled.copiedBuffer(tcpHeader ++ p))
+    })
+    packets.map(Unpooled.copiedBuffer).foreach(bf => {
+      udpSubscriber.foreach { case (channel, subscribers) =>
+        subscribers.map(info => {
+          bf.retain()
+          new DatagramPacket(bf, new InetSocketAddress(info._1, info._2))
+        }).foreach(addr => channel.writeAndFlush(addr))
+      }
+      ReferenceCountUtil.release(bf)
     })
   }
 
   val file: RandomAccessFile = new RandomAccessFile(new File("/gb28181.264"), "rws")
-//  private val fileChannel: FileChannel = file.getChannel
+  //  private val fileChannel: FileChannel = file.getChannel
   var count = 0
   var writeable = true
-  override def onNext(pipeline: ConsumptionPipeline[_, PSH264Data], data: PSH264Data): Unit = {
-    count+=1
 
-    if (writeable && data.isInstanceOf[PESFrame]) {
-      file.write(data.asInstanceOf[PESFrame].getNalus.map(n => {
-        new Array[Byte](n.startCodeLen) ++ n.nalu
-      }).reduce((a, b) => a ++ b))
-    } else {
-      Try(file.close()) match {
-        case Failure(exception) => exception.printStackTrace()
-        case Success(value) =>
-      }
-    }
+  override def onNext(pipeline: ConsumptionPipeline[_, PSH264Data], data: PSH264Data): Unit = {
+    count += 1
+
+    //    if (writeable && data.isInstanceOf[PESFrame]) {
+    //      file.write(data.asInstanceOf[PESFrame].getNalus.map(n => {
+    //        new Array[Byte](n.startCodeLen) ++ n.nalu
+    //      }).reduce((a, b) => a ++ b))
+    //    } else {
+    //      Try(file.close()) match {
+    //        case Failure(exception) => exception.printStackTrace()
+    //        case Success(value) =>
+    //      }
+    //    }
     data match {
       case frame: PESFrame =>
-        frame.getNalus.foreach{ case n => {
-          if (n.nalUnitType == 7) {
-            if (count > 1000) writeable = false
-            System.err.println(tcpSubscriber.size())
-            tcpSubscriber.forEach(c => actors.add(c))
-            tcpSubscriber.clear()
-          }
-          tcpSend(0, n)
-        }}
+        frame.splitNALU.foreach {
+          n =>
+            if (n.nalUnitType == 7) {
+              if (writeable && count > 1000) writeable = false
+              tcpSubscriber.forEach(c => actors.add(c))
+              tcpSubscriber.clear()
+            }
+            tcpSend(0, n)
 
-//        frame.getNalus.foreach(n => {
-//          if (n.nalUnitType == 7) {
-//            if (count > 1000) writeable = false
-//            System.err.println(tcpSubscriber.size())
-//            tcpSubscriber.forEach(c => actors.add(c))
-//            tcpSubscriber.clear()
-//          }
-//          tcpSend(n)
-//        })
+        }
+
+      //        frame.getNalus.foreach(n => {
+      //          if (n.nalUnitType == 7) {
+      //            if (count > 1000) writeable = false
+      //            System.err.println(tcpSubscriber.size())
+      //            tcpSubscriber.forEach(c => actors.add(c))
+      //            tcpSubscriber.clear()
+      //          }
+      //          tcpSend(n)
+      //        })
       case PSH264Audio() =>
       case _ =>
     }

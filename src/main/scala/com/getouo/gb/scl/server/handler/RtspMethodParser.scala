@@ -73,7 +73,7 @@ class RtspMethodParser extends MessageToMessageDecoder[DefaultHttpRequest] with 
     val str = h.get(RtspHeaderNames.TRANSPORT)
     val r = ".*RTP/([^;]*);.*".r
     val r(tt) = str
-    if (tt == "AVP") {
+    if (tt == "AVP" || str.contains("UDP")) {
       val rp = ".*client_port=([0-9]+)-.*".r
       val rp(cPort) = str
       val udpChannel = SpringContextUtil.getBean(clazz = classOf[UdpPusher]).getOrElse(throw new Exception(s"获取UdpPusher失败")).channel

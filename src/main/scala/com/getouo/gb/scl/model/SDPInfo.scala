@@ -15,7 +15,7 @@ case class SDPSessionInfo(v: Int = 0, sessionIdIsNTPTimestamp: Long, serverIpAdd
   val ipType = "IP4"
 
   def test(): String = {
-    s"v=$v\r\n" + s"o=$username $sessionIdIsNTPTimestamp $sessionVersion $netType $ipType $serverIpAddress\r\n" + s"t=0 0\r\n" + s"a=contol:*\r\n"
+    s"v=$v\r\n" + s"o=$username $sessionIdIsNTPTimestamp $sessionIdIsNTPTimestamp $netType $ipType $serverIpAddress\r\n" + s"t=0 0\r\n" + s"a=contol:*\r\n"
   }
 }
 

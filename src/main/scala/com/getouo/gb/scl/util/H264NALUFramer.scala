@@ -84,4 +84,11 @@ object H264NALUFramer {
     }
   }
 
+  def nextUnit(buf: Array[Byte], tags: Array[Array[Byte]]): Option[StepInfo] = {
+    tags.collectFirst{case tag if buf.indexOfSlice(tag) != -1 =>
+      val tagIndex = buf.indexOfSlice(tag)
+      StepInfo(H264NaluData.of(0, buf.take(tagIndex)), tag.length, buf.drop(tagIndex + tag.length))
+    }
+  }
+
 }

@@ -126,9 +126,9 @@ class GB28181RealtimeTCPSource() extends ChannelInboundHandlerAdapter with Activ
           case _ =>
         }
 
-        H264NALUFramer.nextUnit(tailPacket).foreach(ne => {
-          logger.info(s"分包数据具有 nalu 分段 ${ne.nextStartTagLen}")
-        })
+//        H264NALUFramer.nextUnit(tailPacket).foreach(ne => {
+//          logger.info(s"分包数据具有 nalu 分段 ${ne.nextStartTagLen}")
+//        })
 
         //        logger.info(
         //          s"""

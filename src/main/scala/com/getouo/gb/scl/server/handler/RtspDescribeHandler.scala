@@ -26,8 +26,8 @@ class RtspDescribeHandler extends SimpleChannelInboundHandler[RtspDescribeReques
         installSession(sourceId, ctx.channel())
 
         sourceId match {
-          case FileSourceId(file, setupTime) =>
-            val info = loadSdp(i.url, ctx.channel())
+          case fid@FileSourceId(file, setupTime) =>
+            val info = loadSdp(Integer.toUnsignedLong(fid.hashCode), i.url, ctx.channel())
             val response = i.defaultResponse(info)
             logger.info(
               s"""
@@ -55,14 +55,15 @@ class RtspDescribeHandler extends SimpleChannelInboundHandler[RtspDescribeReques
                      |
                      |""".stripMargin
                 val str = loadGBSdp(sdpStr, ctx.channel())
-                val sdpStr2 = loadSdp("", ctx.channel())
+
+                val sdpStr2 = loadSdp(Integer.toUnsignedLong(gid.hashCode),"", ctx.channel())
                 logger.info(
                   s"""
                      |playStream.source.sdpInfo:
                      |$str
                      |-----------------------------
                      |playStream.source.sdpInfo:
-                     |$sdpStr2
+                     |${sdpStr2.text()}
                      |""".stripMargin)
                 val resp = i.defaultResponse(sdpStr2)
                 ctx.writeAndFlush(resp)
@@ -95,7 +96,7 @@ class RtspDescribeHandler extends SimpleChannelInboundHandler[RtspDescribeReques
   }
 
 
-  private def loadSdp(path: String, channel: Channel): SDPInfo = {
+  private def loadSdp(sessionIdAndVersion: Long, path: String, channel: Channel): SDPInfo = {
     val localIp: String = ChannelUtil.localIp(channel)
     val targetIp: String = ChannelUtil.remoteIp(channel)
     //    val aGroup: Seq[(Char, String)] = Seq(('a', "rtpmap:96 H264/90000"), ('a', "framerate:25"), ('a', "control:track0"))
@@ -103,7 +104,8 @@ class RtspDescribeHandler extends SimpleChannelInboundHandler[RtspDescribeReques
 
     val mediaInfo = SDPMediaInfo(rtpTransType = ConstVal.RtpOverUDP(localIp, targetIp, 0), mediaFormat = 96, aGroup = aGroup)
     //    val mediaInfo = SDPMediaInfo(rtpTransType = ConstVal.RtpOverTCP(), mediaFormat = 96, aGroup = aGroup)
-    SDPInfo(SDPSessionInfo(sessionIdIsNTPTimestamp = TimeUtil.currentMicTime(), serverIpAddress = localIp), Seq(mediaInfo))
+//    SDPInfo(SDPSessionInfo(sessionIdIsNTPTimestamp = TimeUtil.currentMicTime(), serverIpAddress = localIp), Seq(mediaInfo))
+    SDPInfo(SDPSessionInfo(sessionIdIsNTPTimestamp = sessionIdAndVersion, serverIpAddress = localIp), Seq(mediaInfo))
   }
 
   private def loadGBSdp(sdpStr: String, channel: Channel): String = {

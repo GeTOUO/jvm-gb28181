@@ -35,7 +35,7 @@ object ConstVal {
       val portBuf = serverPort.get()
       if (portBuf > 0 && portBuf < 65535) s";server_port=${portBuf}-${portBuf + 1}" else ""
     }
-    override def transportValue(): String = s"$value;$castType; client_port=$targetPort-${targetPort+1}${spValue()}"
+    override def transportValue(): String = s"$value;$castType;client_port=$targetPort-${targetPort+1}${spValue()}"
   }
 
   case class RtpOverTCP(tv: String) extends RtpTransType {

@@ -1,7 +1,11 @@
 package com.getouo.gb.scl.server.handler
 
 import com.getouo.gb.scl.model.RtspOptionsRequest
+import com.getouo.gb.scl.server.{GBStreamPublisher, UdpPusher}
+import com.getouo.gb.scl.stream.GB28181PlayStream
+import com.getouo.gb.scl.util.{ChannelUtil, SpringContextUtil}
 import io.netty.channel.{ChannelHandlerContext, SimpleChannelInboundHandler}
+import io.netty.util.concurrent.Future
 
 /**
  * OPTION方法
@@ -22,8 +26,19 @@ import io.netty.channel.{ChannelHandlerContext, SimpleChannelInboundHandler}
  * Public: 可用方法
  */
 class RtspOptionsHandler extends SimpleChannelInboundHandler[RtspOptionsRequest] {
-  override def channelRead0(channelHandlerContext: ChannelHandlerContext, i: RtspOptionsRequest): Unit = {
-    channelHandlerContext.writeAndFlush(i.defaultResponse())
+  override def channelRead0(ctx: ChannelHandlerContext, i: RtspOptionsRequest): Unit = {
+    val response = i.defaultResponse()
+    System.err.println(
+      s"""
+         |回复:
+         |${response.stringMessage()}
+         |-----------------------------------
+         |""".stripMargin)
+    ctx.writeAndFlush(response).addListener((f: Future[_]) => println(
+      s"""
+         |fasong option、：
+         |${f.isSuccess}
+         |""".stripMargin))
   }
 }
 

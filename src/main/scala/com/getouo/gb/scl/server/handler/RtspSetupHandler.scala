@@ -33,7 +33,8 @@ class RtspSetupHandler extends SimpleChannelInboundHandler[RtspSetupRequest] wit
     logger.info(
       s"""
          |SETUP RESP:
-         |$response
+         |${response.stringMessage()}
+         |-----------------------------------
          |""".stripMargin)
     response
   }
@@ -41,7 +42,11 @@ class RtspSetupHandler extends SimpleChannelInboundHandler[RtspSetupRequest] wit
   override def channelRead0(ctx: ChannelHandlerContext, i: RtspSetupRequest): Unit = {
     val channel = ctx.channel()
     val sessionOpt = Session.rtpSession(channel)
-    logger.info(s"准备资源: ${sessionOpt} 的 setup")
+    logger.info(
+      s"""
+         |准备资源: ${sessionOpt} 的 setup
+         |${i.stringMessage()}
+         |""".stripMargin)
     sessionOpt match {
       case None => logger.error(s"session 未创建 on client_port=${ChannelUtil.castSocketAddr(ctx.channel().remoteAddress()).getPort}")
       case Some(rtpSession) =>
