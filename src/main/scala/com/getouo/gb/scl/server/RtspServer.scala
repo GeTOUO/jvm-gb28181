@@ -6,7 +6,8 @@ import io.netty.channel.nio.NioEventLoopGroup
 import io.netty.channel.socket.SocketChannel
 import io.netty.channel.socket.nio.NioServerSocketChannel
 import io.netty.channel.{ChannelFuture, ChannelInitializer, ChannelOption, EventLoopGroup}
-import io.netty.handler.codec.rtsp.RtspDecoder
+import io.netty.handler.codec.http.HttpObjectAggregator
+import io.netty.handler.codec.rtsp.{RtspDecoder, RtspEncoder}
 import io.netty.handler.codec.string.{StringDecoder, StringEncoder}
 import org.springframework.stereotype.Component
 
@@ -27,6 +28,8 @@ class RtspServer extends RunnableServer {
           override def initChannel(ch: SocketChannel): Unit = {
             ch.pipeline
               .addLast(new RtspDecoder) // 添加netty自带的rtsp消息解析器
+              .addLast(new RtspEncoder) // 添加netty自带的rtsp消息解析器
+              .addLast("aggregator", new HttpObjectAggregator(1048576))
               .addLast(new StringEncoder()) // 支持直接发送字符串
               .addLast(new RtspResponseEncoder()) // 支持直接发送RtspResponse
               .addLast(new StringDecoder()) // 支持收string

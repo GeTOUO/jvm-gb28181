@@ -4,11 +4,12 @@ import java.net.InetSocketAddress
 import java.util
 
 import com.getouo.gb.scl.model._
+import com.getouo.gb.scl.rtsp.{DescribeExecutor, OptionsExecutor}
 import com.getouo.gb.scl.server.UdpPusher
 import com.getouo.gb.scl.util.{ChannelUtil, ConstVal, LogSupport, SpringContextUtil}
 import io.netty.channel.{Channel, ChannelHandlerContext}
 import io.netty.handler.codec.MessageToMessageDecoder
-import io.netty.handler.codec.http.{DefaultHttpRequest, HttpHeaders}
+import io.netty.handler.codec.http.{DefaultFullHttpRequest, DefaultHttpRequest, FullHttpRequest, HttpHeaders}
 import io.netty.handler.codec.rtsp.{RtspHeaderNames, RtspMethods}
 
 /**
@@ -38,15 +39,16 @@ import io.netty.handler.codec.rtsp.{RtspHeaderNames, RtspMethods}
  *
  * <<< S->C:TEARDOWN response //S回应该请求
  */
-class RtspMethodParser extends MessageToMessageDecoder[DefaultHttpRequest] with LogSupport {
+class RtspMethodParser extends MessageToMessageDecoder[FullHttpRequest] with LogSupport {
 
-  override def decode(ctx: ChannelHandlerContext, i: DefaultHttpRequest, list: util.List[AnyRef]): Unit = {
+  override def decode(ctx: ChannelHandlerContext, i: FullHttpRequest, list: util.List[AnyRef]): Unit = {
 
+    val channel = ctx.channel()
     val headers = i.headers()
     logger.warn(
       s"""
          |+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-         ||收到【${i.method()}】↓↓↓↓↓↓↓↓↓↓ 【 uri=${i.uri()} 】clientPort=${ChannelUtil.castSocketAddr(ctx.channel().remoteAddress()).getPort}
+         ||收到【${i.method()}】↓↓↓↓↓↓↓↓↓↓ 【 uri=${i.uri()} 】clientPort=${ChannelUtil.castSocketAddr(channel.remoteAddress()).getPort}
          ||headers: $headers
          ||+-+-+-+-+-+-+-+-+-+-+-+-+-+↑↑↑↑↑收到↑↑↑↑↑+-+-+-+-+-+-+-+-+-+-+-+-+-+
          |""".stripMargin)
@@ -54,9 +56,13 @@ class RtspMethodParser extends MessageToMessageDecoder[DefaultHttpRequest] with 
     val CSeq: Int = headers.getInt(RtspHeaderNames.CSEQ)
     RtspHeaderNames.USER_AGENT
     i.method() match {
-      case RtspMethods.OPTIONS => list.add(RtspOptionsRequest(i.uri(), CSeq))
-      case RtspMethods.DESCRIBE => list.add(RtspDescribeRequest(i.uri(), CSeq, headers.get(RtspHeaderNames.USER_AGENT), headers.get(RtspHeaderNames.ACCEPT)))
-      case RtspMethods.SETUP => list.add(RtspSetupRequest(i.uri(), CSeq, deSetupTrans(ctx.channel(), headers)))
+      case RtspMethods.OPTIONS =>
+        //        list.add(RtspOptionsRequest(i.uri(), CSeq))
+        channel.writeAndFlush(new OptionsExecutor(channel, i).call())
+      case RtspMethods.DESCRIBE =>
+//        list.add(RtspDescribeRequest(i.uri(), CSeq, headers.get(RtspHeaderNames.USER_AGENT), headers.get(RtspHeaderNames.ACCEPT)))
+        channel.writeAndFlush(new DescribeExecutor(channel, i).call())
+      case RtspMethods.SETUP => list.add(RtspSetupRequest(i.uri(), CSeq, deSetupTrans(channel, headers)))
       case RtspMethods.PLAY => list.add(RtspPlayRequest(i.uri(), CSeq, headers.get(RtspHeaderNames.SESSION).toLong, headers.get(RtspHeaderNames.RANGE)))
       case RtspMethods.TEARDOWN => list.add(RtspTeardownRequest(i.uri(), CSeq, headers.get(RtspHeaderNames.SESSION).toLong))
       case _ => logger.warn(s"收到未知的消息: $i")
