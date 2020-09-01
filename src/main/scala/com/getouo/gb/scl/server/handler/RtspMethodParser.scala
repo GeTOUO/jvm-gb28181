@@ -4,8 +4,9 @@ import java.net.InetSocketAddress
 import java.util
 
 import com.getouo.gb.scl.model._
-import com.getouo.gb.scl.rtsp.{DescribeExecutor, OptionsExecutor}
+import com.getouo.gb.scl.rtsp.{DescribeExecutor, OptionsExecutor, SetupExecutor}
 import com.getouo.gb.scl.server.UdpPusher
+import com.getouo.gb.scl.util.ConstVal.RtpTransport
 import com.getouo.gb.scl.util.{ChannelUtil, ConstVal, LogSupport, SpringContextUtil}
 import io.netty.channel.{Channel, ChannelHandlerContext}
 import io.netty.handler.codec.MessageToMessageDecoder
@@ -62,14 +63,16 @@ class RtspMethodParser extends MessageToMessageDecoder[FullHttpRequest] with Log
       case RtspMethods.DESCRIBE =>
 //        list.add(RtspDescribeRequest(i.uri(), CSeq, headers.get(RtspHeaderNames.USER_AGENT), headers.get(RtspHeaderNames.ACCEPT)))
         channel.writeAndFlush(new DescribeExecutor(channel, i).call())
-      case RtspMethods.SETUP => list.add(RtspSetupRequest(i.uri(), CSeq, deSetupTrans(channel, headers)))
+      case RtspMethods.SETUP =>
+//        list.add(RtspSetupRequest(i.uri(), CSeq, deSetupTrans(channel, headers)))
+        channel.writeAndFlush(new SetupExecutor(channel, i).call())
       case RtspMethods.PLAY => list.add(RtspPlayRequest(i.uri(), CSeq, headers.get(RtspHeaderNames.SESSION).toLong, headers.get(RtspHeaderNames.RANGE)))
       case RtspMethods.TEARDOWN => list.add(RtspTeardownRequest(i.uri(), CSeq, headers.get(RtspHeaderNames.SESSION).toLong))
       case _ => logger.warn(s"收到未知的消息: $i")
     }
   }
 
-  private def deSetupTrans(c: Channel, h: HttpHeaders): ConstVal.RtpTransType = {
+  private def deSetupTrans(c: Channel, h: HttpHeaders): ConstVal.RtpTransport = {
     val address: InetSocketAddress = ChannelUtil.castSocketAddr(c.localAddress())
     val sIp = address.getAddress.getHostAddress
     val sPort = address.getPort
@@ -77,21 +80,7 @@ class RtspMethodParser extends MessageToMessageDecoder[FullHttpRequest] with Log
     val clientAddress = ChannelUtil.castSocketAddr(c.remoteAddress())
     // RTP/AVP;unicast;client_port=54492-54493\r\n
     val str = h.get(RtspHeaderNames.TRANSPORT)
-    val r = ".*RTP/([^;]*);.*".r
-    val r(tt) = str
-    if (tt == "AVP" || str.contains("UDP")) {
-      val rp = ".*client_port=([0-9]+)-.*".r
-      val rp(cPort) = str
-      val udpChannel = SpringContextUtil.getBean(clazz = classOf[UdpPusher]).getOrElse(throw new Exception(s"获取UdpPusher失败")).channel
-
-      ConstVal.RtpOverUDP(sIp, clientAddress.getAddress.getHostAddress, cPort.toInt).updateServerPort(
-        ChannelUtil.castSocketAddr(udpChannel.localAddress()).getPort
-      )
-    } else if (tt == "AVP/TCP") {
-      ConstVal.RtpOverTCP(str)
-    } else {
-      ConstVal.UnknownTransType
-    }
+    RtpTransport.valueOf(str)
   }
 
   override def exceptionCaught(ctx: ChannelHandlerContext, cause: Throwable): Unit = {

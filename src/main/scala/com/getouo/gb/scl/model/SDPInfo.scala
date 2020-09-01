@@ -23,14 +23,13 @@ case class SDPSessionInfo(v: Int = 0, sessionIdIsNTPTimestamp: Long, serverIpAdd
  *
  * @param mediaType video or avdio
  * @param port
- * @param rtpTransType
  * @param mediaFormat
  * @param aGroup
  */
-case class SDPMediaInfo(mediaType: String = "video", port: Int = 0, rtpTransType: ConstVal.RtpTransType, mediaFormat: Int, aGroup: Seq[(Char, String)]) {
+case class SDPMediaInfo(mediaType: String = "video", port: Int = 0, mediaFormat: Int, aGroup: Seq[(Char, String)]) {
 
   def text(): String = {
-    s"m=$mediaType $port ${rtpTransType.value} $mediaFormat\r\n" +
+    s"m=$mediaType $port RTP/AVP $mediaFormat\r\n" +
       (if (aGroup.isEmpty) "" else aGroup.map{case(t, v) => s"$t=$v\r\n"}.reduce((a, b) => a + b))
   }
 }

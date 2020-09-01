@@ -14,17 +14,17 @@ class RtspUriAccessor(val uri: String) {
   ps.readIgnoreCase("rtsp://")
   val host: String = ps.readTo(':', '/')
 
-  val port = if (ps.ch eq ':') {
-    ps.next
+  val port: Int = if (ps.ch == ':') {
+    ps.next()
     ps.readInt
   } else 554
 
-  while (ps.hasNext && (ps.ch eq '/')) {
-    ps.next
+  while (ps.hasNext && (ps.ch == '/')) {
+    ps.next()
     pathItems.addOne(ps.readTo('/', '?'))
   }
 
-  if (ps.hasNext && (ps.ch eq '?')) {
+  if (ps.hasNext && (ps.ch == '?')) {
     ps.read('?')
     while (ps.hasNext) {
       val key = ps.readTo('=')
@@ -52,9 +52,9 @@ class RtspUriAccessor(val uri: String) {
 
   class LineParser(line: String) {
     var pos = 0
-    private val chars = line.toCharArray()
+    private val chars = line.toCharArray
 
-    private[RtspUriAccessor] def ch = chars(pos)
+    private[RtspUriAccessor] def ch: Char = chars(pos)
 
     def next(): Unit = pos += 1
 
@@ -68,7 +68,7 @@ class RtspUriAccessor(val uri: String) {
 
     @throws[ParseException]
     private def readCharIgnoreCase(c: Char): Unit = {
-      if (Character.toLowerCase(ch) eq Character.toLowerCase(c)) next
+      if (Character.toLowerCase(ch) == Character.toLowerCase(c)) next()
       else throw new ParseException("expected: '" + c + "'", pos)
     }
 
@@ -76,13 +76,13 @@ class RtspUriAccessor(val uri: String) {
       val sb = new StringBuilder
       while (hasNext && !contains(chars.toArray, ch)) {
         sb.append(ch)
-        next
+        next()
       }
       sb.toString
     }
 
     private def contains(chars: Array[Char], ch: Char): Boolean = {
-      for (i <- 0 until chars.length) {
+      for (i <- chars.indices) {
         if (chars(i) == ch) return true
       }
       false
@@ -94,15 +94,15 @@ class RtspUriAccessor(val uri: String) {
       val sb = new StringBuilder
       while (hasNext && ch >= '0' && ch <= '9') {
         sb.append(ch)
-        next
+        next()
       }
       sb.toString.toInt
     }
 
     @throws[ParseException]
     def read(c: Char): Unit = {
-      if (ch ne c) throw new ParseException("expected: '" + c + "'", pos)
-      next
+      if (ch != c) throw new ParseException("expected: '" + c + "'", pos)
+      next()
     }
   }
 

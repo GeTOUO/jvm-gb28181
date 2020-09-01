@@ -15,14 +15,14 @@ class RtspSetupHandler extends SimpleChannelInboundHandler[RtspSetupRequest] wit
   private def sourceSetup[ID <: SourceId, S <: Source[IN], IN <: ISourceData, OUT <: ISourceData, SC <: SourceConsumer[_]]
   (channel: Channel, i: RtspSetupRequest, rtpSession: RtpSession, ps: PlayStream[ID, S, IN, OUT], consumer: SC): RtspSetupResponse = {
     i.rtpTransType match {
-      case ConstVal.RtpOverUDP(sIp, targetIp, targetPort, castType) =>
+      case ut@ConstVal.RtpTransportOverUDP(v) =>
         val udpChannel = SpringContextUtil.getBean(clazz = classOf[UdpPusher]).getOrElse(throw new Exception(s"获取UdpPusher失败")).channel
-        consumer.udpJoin(udpChannel, (targetIp, targetPort))
-      case ConstVal.RtpOverTCP(tv) =>
+        consumer.udpJoin(udpChannel, (ChannelUtil.remoteIp(channel), ut.clientPortL))
+      case ConstVal.RtpTransportOverTCP(tv) =>
         consumer.tcpJoin(channel)
-      case ConstVal.CustomRtpTransType(value, v2transport) =>
+      case ConstVal.CustomRtpTransport(value, v2transport) =>
         logger.info(s"未处理扩展传输方式: $value")
-      case ConstVal.UnknownTransType =>
+      case ConstVal.UnknownTransport =>
         logger.info(s"UnknownTransType")
       case _ =>
         logger.info(s"未知传输方式")

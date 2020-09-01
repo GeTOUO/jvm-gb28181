@@ -1,7 +1,7 @@
 package com.getouo.gb.scl.util
 
 import com.getouo.gb.scl.stream.{PlayStream, SourceConsumer, SourceId}
-import com.getouo.gb.scl.util.ConstVal.{RtpTransType, UnknownTransType}
+import com.getouo.gb.scl.util.ConstVal.{RtpTransport, UnknownTransport, UnknownTransport$}
 import io.netty.channel.Channel
 import io.netty.util.AttributeKey
 
@@ -10,7 +10,7 @@ sealed trait Session {
   val playStreamOpt: Option[PlayStream[_, _, _, _]]
   val consumerOpt: Option[SourceConsumer[_]]
 
-  def idHash(): Long = Integer.toUnsignedLong(id.hashCode)
+  def idHash(): Long = id.idHash()
 }
 
 object Session {
@@ -34,6 +34,6 @@ object Session {
   }
 }
 
-case class RtpSession(id: SourceId, pt: RtpTransType = UnknownTransType,
+case class RtpSession(id: SourceId, pt: RtpTransport = UnknownTransport,
                       playStreamOpt: Option[PlayStream[_, _, _, _]], consumerOpt: Option[SourceConsumer[_]]) extends Session {
 }

@@ -90,7 +90,7 @@ case class RtspPlayResponse(CSeq: Int, session: Long, range: String, timeout: In
        |""".stripMargin
 }
 
-case class RtspSetupRequest(url: String, CSeq: Int, rtpTransType: ConstVal.RtpTransType) extends RtspRequest {
+case class RtspSetupRequest(url: String, CSeq: Int, rtpTransType: ConstVal.RtpTransport) extends RtspRequest {
   override val method: String = RtspConstVal.RtspMethod.SETUP
 
   override def stringMessage(): String =
@@ -101,7 +101,7 @@ case class RtspSetupRequest(url: String, CSeq: Int, rtpTransType: ConstVal.RtpTr
        |""".stripMargin
 }
 
-case class RtspSetupResponse(CSeq: Int, rtpTransType: ConstVal.RtpTransType, session: Long) extends RtspResponse {
+case class RtspSetupResponse(CSeq: Int, rtpTransType: ConstVal.RtpTransport, session: Long) extends RtspResponse {
 
   override def stringMessage(): String =
   //    s"""$version 200 OK

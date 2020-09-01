@@ -1,6 +1,8 @@
 package com.getouo.gb.scl.stream
 
-trait SourceId {}
+trait SourceId {
+  def idHash(): Long = Integer.toUnsignedLong(this.hashCode)
+}
 
 case class FileSourceId(file: String, setupTime: Long) extends SourceId
 

@@ -81,14 +81,14 @@ class RtspDescribeHandler extends SimpleChannelInboundHandler[RtspDescribeReques
         Session.updateChannelSession(channel, opt => Some({
           opt match {
             case Some(value: RtpSession) => value.copy(id = fid)
-            case None => RtpSession(fid, pt = ConstVal.UnknownTransType, None, None)
+            case None => RtpSession(fid, pt = ConstVal.UnknownTransport, None, None)
           }
         }))
       case gid@GBSourceId(deviceId, channelId, setupTime) =>
         Session.updateChannelSession(channel, opt => Some({
           opt match {
             case Some(value: RtpSession) => value.copy(id = gid)
-            case None => RtpSession(gid, pt = ConstVal.UnknownTransType, None, None)
+            case None => RtpSession(gid, pt = ConstVal.UnknownTransport, None, None)
           }
         }))
       case _ =>
@@ -102,7 +102,7 @@ class RtspDescribeHandler extends SimpleChannelInboundHandler[RtspDescribeReques
     //    val aGroup: Seq[(Char, String)] = Seq(('a', "rtpmap:96 H264/90000"), ('a', "framerate:25"), ('a', "control:track0"))
     val aGroup: Seq[(Char, String)] = Seq(('a', "rtpmap:96 H264/90000"), ('a', "framerate:25"), ('a', "control:trackID=0"))
 
-    val mediaInfo = SDPMediaInfo(rtpTransType = ConstVal.RtpOverUDP(localIp, targetIp, 0), mediaFormat = 96, aGroup = aGroup)
+    val mediaInfo = SDPMediaInfo(mediaFormat = 96, aGroup = aGroup)
     //    val mediaInfo = SDPMediaInfo(rtpTransType = ConstVal.RtpOverTCP(), mediaFormat = 96, aGroup = aGroup)
 //    SDPInfo(SDPSessionInfo(sessionIdIsNTPTimestamp = TimeUtil.currentMicTime(), serverIpAddress = localIp), Seq(mediaInfo))
     SDPInfo(SDPSessionInfo(sessionIdIsNTPTimestamp = sessionIdAndVersion, serverIpAddress = localIp), Seq(mediaInfo))
