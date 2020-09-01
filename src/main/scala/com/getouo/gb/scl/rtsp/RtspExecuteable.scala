@@ -11,17 +11,22 @@ trait RtspExecuteable[V] extends Callable[V] {
   val channel: Channel
   val request: FullHttpRequest
 
-  def toResponse(status: HttpResponseStatus = RtspResponseStatuses.OK): FullHttpResponse = {
-    val response = new DefaultFullHttpResponse(RtspVersions.RTSP_1_0, status)
+  def baseResponse(status: HttpResponseStatus = RtspResponseStatuses.OK, payloadOpt: Option[ByteBuf]): FullHttpResponse = {
+    val response = payloadOpt.map(payload => {
+      val rep = new DefaultFullHttpResponse(RtspVersions.RTSP_1_0, status, payload)
+      rep.headers().set(RtspHeaderNames.CONTENT_LENGTH, payload.readableBytes())
+      rep.headers().add(RtspHeaderNames.CONTENT_BASE, request.uri())
+      rep
+    }).getOrElse(new DefaultFullHttpResponse(RtspVersions.RTSP_1_0, status))
     response.headers().set(RtspHeaderNames.CSEQ, request.headers().get(RtspHeaderNames.CSEQ))
+    val session = request.headers.get(RtspHeaderNames.SESSION)
+    if (session != null) response.headers.add(RtspHeaderNames.SESSION, session)
     response
   }
 
-  def payloadResponse(status: HttpResponseStatus = RtspResponseStatuses.OK, payload: ByteBuf): FullHttpResponse = {
-    val response = new DefaultFullHttpResponse(RtspVersions.RTSP_1_0, status, payload)
-    response.headers().set(RtspHeaderNames.CSEQ, request.headers().get(RtspHeaderNames.CSEQ))
-    response.headers().set(RtspHeaderNames.CONTENT_LENGTH, payload.readableBytes())
-    response.headers().add(RtspHeaderNames.CONTENT_BASE, request.uri())
-    response
-  }
+  def toResponse(status: HttpResponseStatus = RtspResponseStatuses.OK): FullHttpResponse =
+    baseResponse(status, None)
+
+  def payloadResponse(status: HttpResponseStatus = RtspResponseStatuses.OK, payload: ByteBuf): FullHttpResponse =
+    baseResponse(status, Some(payload))
 }

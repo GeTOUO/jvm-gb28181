@@ -43,14 +43,14 @@ import io.netty.handler.codec.rtsp.{RtspHeaderNames, RtspMethods}
 class RtspMethodParser extends MessageToMessageDecoder[FullHttpRequest] with LogSupport {
 
   override def decode(ctx: ChannelHandlerContext, i: FullHttpRequest, list: util.List[AnyRef]): Unit = {
-
+    if (i.headers().get(RtspHeaderNames.CSEQ) == null) return
     val channel = ctx.channel()
     val headers = i.headers()
     logger.warn(
       s"""
          |+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
          ||收到【${i.method()}】↓↓↓↓↓↓↓↓↓↓ 【 uri=${i.uri()} 】clientPort=${ChannelUtil.castSocketAddr(channel.remoteAddress()).getPort}
-         ||headers: $headers
+         ||request: $i
          ||+-+-+-+-+-+-+-+-+-+-+-+-+-+↑↑↑↑↑收到↑↑↑↑↑+-+-+-+-+-+-+-+-+-+-+-+-+-+
          |""".stripMargin)
 

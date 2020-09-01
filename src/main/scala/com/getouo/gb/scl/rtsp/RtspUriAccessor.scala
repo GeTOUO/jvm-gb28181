@@ -15,13 +15,11 @@ class RtspUriAccessor(val uri: String) {
   val host: String = ps.readTo(':', '/')
 
   val port: Int = if (ps.ch == ':') {
-    ps.next()
-    ps.readInt
+    ps.next().readInt
   } else 554
 
   while (ps.hasNext && (ps.ch == '/')) {
-    ps.next()
-    pathItems.addOne(ps.readTo('/', '?'))
+    pathItems.addOne(ps.next().readTo('/', '?'))
   }
 
   if (ps.hasNext && (ps.ch == '?')) {
@@ -56,7 +54,9 @@ class RtspUriAccessor(val uri: String) {
 
     private[RtspUriAccessor] def ch: Char = chars(pos)
 
-    def next(): Unit = pos += 1
+    def next(): LineParser = {
+      pos += 1; this
+    }
 
     @throws[ParseException]
     private[RtspUriAccessor] def readIgnoreCase(word: String): Unit = {
