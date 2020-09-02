@@ -101,7 +101,8 @@ class GBStreamPublisher extends ChannelInboundHandlerAdapter with Runnable with 
     //    timestamp = lo.toInt
     val packets = data.rtpPacket(sendSeq, timestamp)
 
-    val nulHeaderTag = if (data.startCodeLen == 3) Array[Byte](0x00,0x00,0x01) else Array[Byte](0x00,0x00,0x00,0x01)
+    val nulHeaderTag =  Array[Byte](0x00,0x40,0x00,0x00)
+
 
     websocketActors.writeAndFlush(new BinaryWebSocketFrame(Unpooled.copiedBuffer(nulHeaderTag ++ data.nalu)))
     packets.foreach(p => {
