@@ -4,6 +4,7 @@ import java.io.{File, RandomAccessFile}
 import java.net.InetSocketAddress
 import java.util.concurrent.atomic.AtomicInteger
 
+import com.getouo.gb.HttpRequestHandler
 import com.getouo.gb.scl.data.{H264NaluData, PESFrame, PSH264Audio, PSH264Data}
 import com.getouo.gb.scl.stream.{ConsumptionPipeline, SourceConsumer}
 import com.getouo.gb.scl.util.ChannelUtil
@@ -15,6 +16,7 @@ import io.netty.channel.group.{ChannelGroup, DefaultChannelGroup}
 import io.netty.channel.nio.NioEventLoopGroup
 import io.netty.channel.socket.{DatagramPacket, SocketChannel}
 import io.netty.channel.socket.nio.NioServerSocketChannel
+import io.netty.handler.codec.http.websocketx.BinaryWebSocketFrame
 import io.netty.util.ReferenceCountUtil
 import io.netty.util.concurrent.{Future, GlobalEventExecutor}
 
@@ -25,6 +27,8 @@ class GBStreamPublisher extends ChannelInboundHandlerAdapter with Runnable with 
 
   val thisHandler: GBStreamPublisher = this
   val actors: ChannelGroup = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE)
+
+  val websocketActors: ChannelGroup = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE)
 
   override def channelActive(ctx: ChannelHandlerContext): Unit = {
     //    actors.add(ctx.channel())
@@ -92,14 +96,18 @@ class GBStreamPublisher extends ChannelInboundHandlerAdapter with Runnable with 
   private val timestampIncrement: Int = (90000 / framerate).intValue() //+0.5
 
   def tcpSend(lo: Long, data: H264NaluData): Unit = {
-//    timestamp = timestamp + timestampIncrement
+    //    timestamp = timestamp + timestampIncrement
     timestamp = timestamp + 3600
     //    timestamp = lo.toInt
     val packets = data.rtpPacket(sendSeq, timestamp)
+
+    val nulHeaderTag = if (data.startCodeLen == 3) Array[Byte](0x00,0x00,0x01) else Array[Byte](0x00,0x00,0x00,0x01)
+
+    websocketActors.writeAndFlush(new BinaryWebSocketFrame(Unpooled.copiedBuffer(nulHeaderTag ++ data.nalu)))
     packets.foreach(p => {
       val tcpHeader = Array[Byte]('$', 0x00, ((p.length & 0xFF00) >> 8).byteValue(), (p.length & 0xFF).byteValue())
       //      tcpSubscriber.writeAndFlush(Unpooled.copiedBuffer(tcpHeader ++ p))
-
+      //      websocketActors.writeAndFlush(new BinaryWebSocketFrame(Unpooled.copiedBuffer(p)))
       actors.writeAndFlush(Unpooled.copiedBuffer(tcpHeader ++ p))
     })
     packets.map(Unpooled.copiedBuffer).foreach(bf => {
@@ -139,6 +147,9 @@ class GBStreamPublisher extends ChannelInboundHandlerAdapter with Runnable with 
               if (writeable && count > 1000) writeable = false
               tcpSubscriber.forEach(c => actors.add(c))
               tcpSubscriber.clear()
+
+              HttpRequestHandler.actors.forEach(c => websocketActors.add(c))
+              HttpRequestHandler.actors.clear()
             }
             tcpSend(0, n)
 
