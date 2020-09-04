@@ -5,7 +5,7 @@ import java.util.concurrent.TimeUnit
 import com.getouo.gb.configuration.PlatConfiguration
 import com.getouo.gb.scl.io.GB28181RealtimeTCPSource
 import com.getouo.gb.scl.model.GBDevice
-import com.getouo.gb.scl.server.{GBStreamPublisher, SipUdpServer}
+import com.getouo.gb.scl.server.GBStreamPublisher
 import com.getouo.gb.scl.sip.SipMessageTemplate
 import com.getouo.gb.scl.stream.{GB28181ConsumptionPipeline, GB28181PlayStream, GBSourceId}
 import com.getouo.gb.scl.util.NetAddressUtil
@@ -14,7 +14,7 @@ import org.springframework.stereotype.Service
 import scala.util.{Failure, Success, Try}
 
 @Service
-class DeviceService(redis: RedisService, udpServer: SipUdpServer, platCfg: PlatConfiguration) {
+class DeviceService(redis: RedisService, platCfg: PlatConfiguration) {
 
   def findDevice(id: String): Option[GBDevice] = Try(redis.get[GBDevice](id)) match {
     case Failure(_) => None

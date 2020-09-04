@@ -74,4 +74,4 @@ case class PESH264IFrame() extends PESFrame {}
 
 case class PESH264PFrame() extends PESFrame {}
 
-case class PSH264Audio() extends PSH264Data {}
+case class PSH264Audio() extends PESFrame {}

@@ -29,6 +29,8 @@ public class HttpRequestHandler extends SimpleChannelInboundHandler<FullHttpRequ
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, FullHttpRequest fullHttpRequest) throws Exception {
         logger.warn("----------- wswsws ---------------");
+        logger.warn(fullHttpRequest.toString());
+        logger.warn("----------- ^^^^^^ ---------------");
         HttpHeaders headers = fullHttpRequest.headers();
         if ("Upgrade".equalsIgnoreCase(headers.get(HttpHeaderNames.CONNECTION)) && "WebSocket".equalsIgnoreCase(headers.get(HttpHeaderNames.UPGRADE))) {
             handleHandshake(ctx, fullHttpRequest);

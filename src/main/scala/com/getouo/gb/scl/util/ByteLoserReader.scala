@@ -24,6 +24,6 @@ case class ByteLoserReader(bytes: Array[Byte]) extends Seq[Byte] {
   }
 
   def matcher(startIndex: Int, target: Array[Byte]): Boolean = {
-    arr.indexOfSlice(target) == startIndex
+    arr.slice(startIndex, startIndex + target.length) sameElements target
   }
 }

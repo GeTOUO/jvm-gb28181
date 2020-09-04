@@ -6,8 +6,8 @@ import com.getouo.gb.scl.data.ISourceData
 import com.getouo.gb.scl.util.Observer
 import io.netty.channel.Channel
 
-import scala.collection.concurrent
 import scala.concurrent.{ExecutionContext, Future}
+import scala.collection.concurrent
 import scala.jdk.CollectionConverters._
 import scala.util.{Failure, Success, Try}
 

@@ -13,13 +13,13 @@
 <script>
 
 window.onload = function() {
-    var socketURL = 'ws://192.168.2.19:8551';
+    var socketURL = 'ws://192.168.2.19:8550';
     var jmuxer = new JMuxer({
         node: 'player',
         mode: 'video',
         clearBuffer: true,
         flushingTime: 1000,
-        fps: 30,
+        fps: 25,
         debug: true
      });
 

@@ -141,6 +141,11 @@ class GBStreamPublisher extends ChannelInboundHandlerAdapter with Runnable with 
     //      }
     //    }
     data match {
+      case audio: PSH264Audio =>
+//        audio.splitNALU.foreach(
+//          n =>
+//
+//        )
       case frame: PESFrame =>
         frame.splitNALU.foreach {
           n =>
@@ -148,7 +153,6 @@ class GBStreamPublisher extends ChannelInboundHandlerAdapter with Runnable with 
               if (writeable && count > 1000) writeable = false
               tcpSubscriber.forEach(c => actors.add(c))
               tcpSubscriber.clear()
-
               HttpRequestHandler.actors.forEach(c => websocketActors.add(c))
               HttpRequestHandler.actors.clear()
             }
@@ -165,7 +169,7 @@ class GBStreamPublisher extends ChannelInboundHandlerAdapter with Runnable with 
       //          }
       //          tcpSend(n)
       //        })
-      case PSH264Audio() =>
+
       case _ =>
     }
   }

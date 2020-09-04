@@ -14,7 +14,7 @@ object ChannelGroups {
 
   private def createGroup(): ChannelGroup = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE)
 
-  val DEFAULT_GROUP_NAME = "DEFAULT_CHANNEL_GROUP"
+  private val DEFAULT_GROUP_NAME = "DEFAULT_CHANNEL_GROUP"
   private val defaultGroup: ChannelGroup = createGroup()
 
   private val channelGroups: ConcurrentHashMap[String, ChannelGroup] = new ConcurrentHashMap[String, ChannelGroup]()
