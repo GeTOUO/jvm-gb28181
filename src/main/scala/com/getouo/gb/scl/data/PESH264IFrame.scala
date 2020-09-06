@@ -20,7 +20,8 @@ class PESFrame extends PSH264Data {
     var thePreviousTagLen = -1
     var hasRemaining = true
     while (hasRemaining) {
-      H264NALUFramer.nextUnit(remainingData, Array[Array[Byte]](H264NALUFramer.START_TAG4)) match {
+//      H264NALUFramer.nextUnit(remainingData, Array[Array[Byte]](H264NALUFramer.START_TAG4, H264NALUFramer.START_TAG3)) match {
+      H264NALUFramer.nextUnit(remainingData, false) match {
         case Some(step) =>
           if (thePreviousTagLen != -1) {
             step.data match {
@@ -32,6 +33,12 @@ class PESFrame extends PSH264Data {
           remainingData = step.leftover
           thePreviousTagLen = step.nextStartTagLen
         case None =>
+          if (thePreviousTagLen == -1) {
+            H264NALUFramer.nextUnit(remainingData) match {
+              case None =>
+              case Some(value) => collector.addOne(H264NaluData(value.nextStartTagLen, value.leftover))
+            }
+          }
           if (thePreviousTagLen != -1 && remainingData.nonEmpty)
             collector.addOne(H264NaluData(thePreviousTagLen, remainingData))
           hasRemaining = false

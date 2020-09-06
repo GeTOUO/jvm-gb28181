@@ -16,8 +16,8 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map.Entry;
 
-import static com.dxp.sip.codec.sip.SipConstants.CR;
-import static com.dxp.sip.codec.sip.SipConstants.LF;
+import static com.getouo.sip.SipConstants.CR;
+import static com.getouo.sip.SipConstants.LF;
 import static io.netty.buffer.Unpooled.directBuffer;
 import static io.netty.buffer.Unpooled.unreleasableBuffer;
 

@@ -13,8 +13,8 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.net.InetSocketAddress;
 
-import static com.dxp.sip.codec.sip.SipHeaderNames.CONNECTION;
-import static com.dxp.sip.codec.sip.SipHeaderNames.CONTENT_LENGTH;
+import static com.getouo.sip.SipHeaderNames.CONNECTION;
+import static com.getouo.sip.SipHeaderNames.CONTENT_LENGTH;
 
 /**
  * 统一转发为 FullSipRequest,FullSipResponse.

@@ -153,8 +153,10 @@ class GB28181RealtimeTCPSource() extends ChannelInboundHandlerAdapter with Activ
 
   private def loadFrameH264(reader: ByteLoserReader, frame: PESFrame): Unit = {
 
+    var count = 1
     var pesStartIndex = reader.indexOfSlice(PSHeaders.PS_VIDEO_PES_HEADER)
-    while (pesStartIndex == 0) {
+    while (pesStartIndex >= 0) {
+      reader.drop(pesStartIndex)
       val pts = getPts(reader)
       reader.drop(4)
       val pesPayloadLen = Buffers.wrap(reader.take(2).toArray).readUnsignedShort() // header tag后两个字节的长度，
@@ -183,6 +185,12 @@ class GB28181RealtimeTCPSource() extends ChannelInboundHandlerAdapter with Activ
       //      val len = if (naluArray.indexOfSlice(START_TAG4) == 0) 4 else 3
       //      frame.addBytes(H264NaluData(len, naluArray.drop(len)))
       pesStartIndex = reader.indexOfSlice(PSHeaders.PS_VIDEO_PES_HEADER)
+
+      if (pesStartIndex > 0) {
+        System.err.println(s"一个包里面居然有被 忽略的数据超过${count += 1; count}个 pes 在 $pesStartIndex ; 此时包里还有size=${reader.size}")
+      }
+//      val i = reader.indexOfSlice(PSHeaders.PS_PES_HEADER)
+//      if (i >= 0) System.err.println(s"下一个的 pes 标志在 $i , 包里还有size=${reader.size}")
     }
   }
 

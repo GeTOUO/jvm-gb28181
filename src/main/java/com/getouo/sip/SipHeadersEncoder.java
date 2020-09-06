@@ -5,9 +5,9 @@ import io.netty.buffer.ByteBufUtil;
 import io.netty.util.AsciiString;
 import io.netty.util.CharsetUtil;
 
-import static com.dxp.sip.codec.sip.AbstractSipObjectEncoder.CRLF_SHORT;
-import static com.dxp.sip.codec.sip.SipConstants.COLON;
-import static com.dxp.sip.codec.sip.SipConstants.SP;
+import static com.getouo.sip.AbstractSipObjectEncoder.CRLF_SHORT;
+import static com.getouo.sip.SipConstants.COLON;
+import static com.getouo.sip.SipConstants.SP;
 
 /**
  * @author carzy

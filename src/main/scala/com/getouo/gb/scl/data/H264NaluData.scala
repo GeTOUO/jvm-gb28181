@@ -2,6 +2,8 @@ package com.getouo.gb.scl.data
 
 import java.nio.ByteBuffer
 import java.util.concurrent.atomic.AtomicInteger
+
+import com.getouo.gb.scl.util.H264NALUFramer
 ;
 
 case class H264NaluData(startCodeLen: Int, nalu: Array[Byte]) extends H264SourceData with UnsafeNaluData {
@@ -9,6 +11,10 @@ case class H264NaluData(startCodeLen: Int, nalu: Array[Byte]) extends H264Source
   val forbiddenBit: Int = nalu_head & 0x80 //1 bit 一般为0，为 1 时表示此单元出现错误，解码器会丢弃该数据，按丢包处理。
   val nalReferenceIdc: Int = nalu_head & 0x60;
   val nalUnitType: Int = nalu_head & 0x1f; // 5 bit
+
+  def incStartTag(): Array[Byte] = {
+    (if (startCodeLen == 4) H264NALUFramer.START_TAG4 else H264NALUFramer.START_TAG3) ++ nalu
+  }
 
   def rtpPacket(seq: AtomicInteger, nextTime: Int): Seq[Array[Byte]] = {
     if (nalu.length - 1 <= H264NaluData.DEFAULT_MTU_LEN) {

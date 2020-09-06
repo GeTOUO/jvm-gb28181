@@ -47,23 +47,23 @@ class DynamicSwitchingProtocol extends ByteToMessageDecoder with LogSupport {
       throw new ProtocolParseException("读出的协议头有异常 expected space")
     }
 
-    rawInitialLineUnits(2).toUpperCase match {
-      case http if Seq(HttpVersion.HTTP_1_0, HttpVersion.HTTP_1_1).map(_.text()).contains(http) =>
+    val protocol = HttpVersion.valueOf(rawInitialLineUnits(2).toUpperCase)
+    protocol match {
+      case HttpVersion.HTTP_1_0 | HttpVersion.HTTP_1_1 =>
         switchToHttpAndWebsocket(channelHandlerContext)
-      case rtsp if rtsp == RtspVersions.RTSP_1_0.text() =>
-        switchToRtsp(channelHandlerContext)
-      case sip if sip == SipVersions.SIP_2_0.text() =>
-        switchToSip(channelHandlerContext)
+      case RtspVersions.RTSP_1_0 => switchToRtsp(channelHandlerContext)
+      case SipVersions.SIP_2_0 => switchToSip(channelHandlerContext)
       case unSupportProtocol =>
         channelHandlerContext.close()
-        throw new ProtocolUnSupportException(unSupportProtocol)
+        throw new ProtocolUnSupportException(unSupportProtocol.text())
     }
+    logger.info(s"switch protocol to ${protocol.protocolName()}")
+
     list.add(byteBuf.retain())
     channelHandlerContext.pipeline.remove(this)
   }
 
   def switchToSip(ctx: ChannelHandlerContext): Unit = {
-    logger.info(s"切换到 sip")
     val pipeline = ctx.pipeline()
     pipeline.addLast("decoder", new SipMessageStreamDecoder)
     pipeline.addLast("encoder", new SipMessageEncoder)
@@ -71,7 +71,6 @@ class DynamicSwitchingProtocol extends ByteToMessageDecoder with LogSupport {
   }
 
   def switchToRtsp(ctx: ChannelHandlerContext): Unit = {
-    logger.info(s"切换到 rtsp")
     val pipeline = ctx.pipeline()
     pipeline
       .addLast(new RtspDecoder) // 添加netty自带的rtsp消息解析器
@@ -93,7 +92,6 @@ class DynamicSwitchingProtocol extends ByteToMessageDecoder with LogSupport {
   }
 
   def switchToHttpAndWebsocket(ctx: ChannelHandlerContext): Unit = {
-    logger.info(s"切换到 http")
     val readIdeaTime: Int = 60 * 1000 * 1000
     val pipeline = ctx.pipeline()
 
@@ -113,15 +111,4 @@ class DynamicSwitchingProtocol extends ByteToMessageDecoder with LogSupport {
 object DynamicSwitchingProtocol {
   val MIN_LENGTH = 5
   val SP = ' '
-
-
-  def main(args: Array[String]): Unit = {
-
-    println(Seq(HttpVersion.HTTP_1_0, HttpVersion.HTTP_1_1).map(_.text()).contains("http"))
-    val buffer: Buffer = Buffers.wrap(s" ")
-    val firstLine = buffer.readLine()
-    println(RtspVersions.RTSP_1_0.text())
-    println(RtspVersions.RTSP_1_0.protocolName())
-    println(firstLine)
-  }
 }
