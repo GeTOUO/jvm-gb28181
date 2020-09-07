@@ -2,11 +2,13 @@ package com.getouo.gb.scl.server.handler
 
 import com.getouo.gb.scl.util.LogSupport
 import io.netty.channel.{ChannelHandlerContext, SimpleChannelInboundHandler}
-import io.netty.handler.codec.http.{DefaultFullHttpResponse, FullHttpRequest, HttpHeaderNames, HttpHeaders, HttpResponseStatus, HttpVersion}
+import io.netty.handler.codec.http.{DefaultFullHttpResponse, DefaultHttpRequest, FullHttpRequest, HttpHeaderNames, HttpHeaders, HttpRequest, HttpResponseStatus, HttpVersion}
 
 class SipRequestHandler extends SimpleChannelInboundHandler[FullHttpRequest] with LogSupport {
   override def channelRead0(channelHandlerContext: ChannelHandlerContext, fullHttpRequest: FullHttpRequest): Unit = {
+    val re: DefaultHttpRequest = null
 
+    fullHttpRequest.content()
     val headers = fullHttpRequest.headers
     System.err.println(
       s"""

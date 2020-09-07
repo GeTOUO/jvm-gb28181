@@ -101,6 +101,21 @@ public class DefaultSipRequest extends DefaultSipMessage implements SipRequest {
     }
 
     @Override
+    public SipResponse createResponse(final SipResponseStatus status) {
+        DefaultFullSipResponse response = new DefaultFullSipResponse(status);
+        AbstractSipHeaders rspHeaders = response.headers();
+        AbstractSipHeaders headers = this.headers();
+        rspHeaders.set(SipHeaderNames.FROM, headers.get(SipHeaderNames.FROM));
+        rspHeaders.set(SipHeaderNames.TO, headers.get(SipHeaderNames.TO));
+        rspHeaders.set(SipHeaderNames.CALL_ID, headers.get(SipHeaderNames.CALL_ID));
+        rspHeaders.set(SipHeaderNames.CSEQ, headers.get(SipHeaderNames.CSEQ));
+        rspHeaders.set(SipHeaderNames.VIA, headers.get(SipHeaderNames.VIA));
+        rspHeaders.set(SipHeaderNames.MAX_FORWARDS, headers.get(SipHeaderNames.MAX_FORWARDS));
+        response.setRecipient(this.recipient());
+        return response;
+    }
+
+    @Override
     public int hashCode() {
         int result = 1;
         result = HASH_CODE_PRIME * result + method.hashCode();

@@ -12,7 +12,9 @@ import io.netty.handler.codec.string.{StringDecoder, StringEncoder}
 import io.sipstack.netty.codec.sip.{SipMessageDatagramDecoder, SipMessageEncoder}
 import java.util.concurrent.{ConcurrentHashMap, CountDownLatch, TimeUnit}
 
+import com.getouo.gb.scl.sip.{SipRequestDispatcher, SipResponseDispatcher}
 import com.getouo.gb.scl.stream.SourceConsumer
+import com.getouo.sip.{AbstractSipRequestEncoder, AbstractSipResponseEncoder, SipObjectAggregator, SipObjectTcpDecoder, SipObjectUdpDecoder}
 import io.netty.util.concurrent.Future
 import org.springframework.stereotype.Component
 
@@ -49,9 +51,16 @@ class HybridProtocolInstructionServer extends RunnableServer {
     @throws[Exception]
     override protected def initChannel(ch: DatagramChannel): Unit = {
       val pipeline = ch.pipeline
-      pipeline.addLast("decoder", new SipMessageDatagramDecoder)
-      pipeline.addLast("encoder", new SipMessageEncoder)
-      pipeline.addLast(new ProxyHandler)
+      pipeline.addLast(new AbstractSipResponseEncoder())
+      pipeline.addLast(new AbstractSipRequestEncoder())
+      pipeline.addLast(new SipObjectUdpDecoder())
+      pipeline.addLast(new SipObjectAggregator(8192 * 10))
+      pipeline.addLast(new SipRequestDispatcher())
+      pipeline.addLast(new SipResponseDispatcher())
+
+//      pipeline.addLast("decoder", new SipMessageDatagramDecoder)
+//      pipeline.addLast("encoder", new SipMessageEncoder)
+//      pipeline.addLast(new ProxyHandler)
       //      pipeline.addLast("handler", handler)
     }
   })

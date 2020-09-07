@@ -7,7 +7,7 @@ import com.getouo.gb.scl.stream.{GB28181PlayStream, GBSourceId}
 import com.getouo.gb.scl.util.{LogSupport, SpringContextUtil}
 import gov.nist.javax.sip.header.SIPHeaderNames
 import io.netty.channel.{Channel, ChannelHandlerContext, SimpleChannelInboundHandler}
-import io.pkts.buffer.Buffers
+import io.pkts.buffer.{Buffers, ByteBuffer}
 import io.pkts.packet.sip.header.SipHeader
 import io.pkts.packet.sip.header.impl.SipHeaderImpl
 import io.pkts.packet.sip.{SipRequest, SipResponse}
@@ -44,7 +44,6 @@ class ProxyHandler extends SimpleChannelInboundHandler[SipMessageEvent] with Log
     if (resp.isFinal && resp.isInvite) {
       val ack = SipMessageTemplate.generateAck(resp)
 
-
       GB28181PlayStream.byIdOpt(GBSourceId(tag.toString, tag.toString)).foreach(f => {
         f.source.sdpInfo.set(resp.getRawContent.toString)
       })
@@ -69,8 +68,23 @@ class ProxyHandler extends SimpleChannelInboundHandler[SipMessageEvent] with Log
       //      sipResponse.getReasonPhrase
     } else if (req.isMessage) {
 
-      Try(XML.loadString(req.getContent.toString)) match {
-        case Failure(exception) => logger.error(s"解析请求消息失败: ${exception.getMessage}")
+      var bodyStr = req.getContent.toString
+
+      if (bodyStr.startsWith("\r\n")) {
+        bodyStr = bodyStr.substring(2).appended('>')
+      }
+
+      Try(XML.loadString(bodyStr)) match {
+        case Failure(exception) =>
+
+          logger.error(
+            s"""
+               |解析请求消息失败: ${exception.getMessage}
+               |${req}
+               |${req.getContent.asInstanceOf[ByteBuffer].getClass}
+               |${req.getContent}
+               |${bodyStr}
+               |""".stripMargin)
         case Success(xml) =>
           val xmlEmptyNode = <EmptyNode>EmptyNode</EmptyNode>
           val cmdOpt: Option[Node] = (xml \ "CmdType").headOption

@@ -41,4 +41,9 @@ public interface SipMessage extends SipObject {
      */
     InetSocketAddress recipient();
 
+    /**
+     * 快速创建该请求的响应消息
+     * @param status
+     */
+    SipResponse createResponse(SipResponseStatus status);
 }

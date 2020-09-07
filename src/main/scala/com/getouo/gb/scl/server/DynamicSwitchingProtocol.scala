@@ -6,9 +6,11 @@ import java.util.concurrent.TimeUnit
 import com.getouo.gb.HttpRequestHandler
 import com.getouo.gb.scl.exception.{ProtocolParseException, ProtocolUnSupportException}
 import com.getouo.gb.scl.server.handler.{ProxyHandler, RtspDescribeHandler, RtspMethodParser, RtspOptionsHandler, RtspPlayHandler, RtspResponseEncoder, RtspSetupHandler, RtspTailHandler}
+import com.getouo.gb.scl.sip.{SipRequestDispatcher, SipResponseDispatcher}
 import com.getouo.gb.scl.util.LogSupport
+import com.getouo.sip.{AbstractSipRequestEncoder, AbstractSipResponseEncoder, SipObjectAggregator, SipObjectTcpDecoder, SipObjectUdpDecoder}
 import io.netty.buffer.ByteBuf
-import io.netty.channel.ChannelHandlerContext
+import io.netty.channel.{ChannelHandlerContext, ChannelPipeline}
 import io.netty.handler.codec.ByteToMessageDecoder
 import io.netty.handler.codec.http.{HttpObjectAggregator, HttpServerCodec, HttpVersion}
 import io.netty.handler.codec.rtsp.{RtspDecoder, RtspEncoder, RtspVersions}
@@ -48,11 +50,13 @@ class DynamicSwitchingProtocol extends ByteToMessageDecoder with LogSupport {
     }
 
     val protocol = HttpVersion.valueOf(rawInitialLineUnits(2).toUpperCase)
+    val pipeline = channelHandlerContext.pipeline()
     protocol match {
       case HttpVersion.HTTP_1_0 | HttpVersion.HTTP_1_1 =>
         switchToHttpAndWebsocket(channelHandlerContext)
       case RtspVersions.RTSP_1_0 => switchToRtsp(channelHandlerContext)
-      case SipVersions.SIP_2_0 => switchToSip(channelHandlerContext)
+//      case SipVersions.SIP_2_0 => switchSipModel(pipeline)
+      case SipVersions.SIP_2_0 => switchSipModel2(pipeline)
       case unSupportProtocol =>
         channelHandlerContext.close()
         throw new ProtocolUnSupportException(unSupportProtocol.text())
@@ -63,8 +67,16 @@ class DynamicSwitchingProtocol extends ByteToMessageDecoder with LogSupport {
     channelHandlerContext.pipeline.remove(this)
   }
 
-  def switchToSip(ctx: ChannelHandlerContext): Unit = {
-    val pipeline = ctx.pipeline()
+  def switchSipModel(pipeline: ChannelPipeline): Unit = {
+    pipeline.addLast(new AbstractSipResponseEncoder())
+    pipeline.addLast(new AbstractSipRequestEncoder())
+    pipeline.addLast(new SipObjectTcpDecoder())
+    pipeline.addLast(new SipObjectAggregator(8192 * 10))
+    pipeline.addLast(new SipRequestDispatcher())
+    pipeline.addLast(new SipResponseDispatcher())
+  }
+
+  def switchSipModel2(pipeline: ChannelPipeline): Unit = {
     pipeline.addLast("decoder", new SipMessageStreamDecoder)
     pipeline.addLast("encoder", new SipMessageEncoder)
     pipeline.addLast("sip dispatcher", new ProxyHandler)

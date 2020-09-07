@@ -69,6 +69,11 @@ public class DefaultSipMessage extends DefaultSipObject implements SipMessage {
     }
 
     @Override
+    public SipResponse createResponse(SipResponseStatus status) {
+        throw new ClassCastException("Unable to cast this SipMessage into a SipRequest");
+    }
+
+    @Override
     public int hashCode() {
         int result = 1;
         result = HASH_CODE_PRIME * result + headers.hashCode();

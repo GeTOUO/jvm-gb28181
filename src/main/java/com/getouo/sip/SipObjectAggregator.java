@@ -245,6 +245,11 @@ public class SipObjectAggregator
         }
 
         @Override
+        public SipResponse createResponse(SipResponseStatus status) {
+            return message.createResponse(status);
+        }
+
+        @Override
         public boolean release() {
             return content.release();
         }
