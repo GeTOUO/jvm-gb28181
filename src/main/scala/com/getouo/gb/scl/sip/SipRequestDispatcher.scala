@@ -61,6 +61,10 @@ class SipRequestDispatcher extends SimpleChannelInboundHandler[FullSipRequest] w
             val isUdp = channel.isInstanceOf[NioDatagramChannel]
             val udpOpt = if(isUdp) Some(req.recipient().getAddress.getHostAddress, req.recipient().getPort) else None
 
+            if (!isUdp) {
+              ChannelGroups.addChannel(channel)
+            }
+
             oldOpt.map(_.copy(tcpOpt = if (!isUdp) Some(channel.id()) else None, udpAddrOpt = udpOpt))
               .getOrElse(GBDevice(deviceId, if (!isUdp) Some(channel.id()) else None, udpOpt))
           })
@@ -110,6 +114,7 @@ class SipRequestDispatcher extends SimpleChannelInboundHandler[FullSipRequest] w
     } else {
       val response = req.createResponse(SipResponseStatus.OK)
       response.headers().set(SipHeaderNames.EXPECT, 3600)
+      ChannelGroups.addChannel(channel)
       channel.writeAndFlush(response)
     }
 

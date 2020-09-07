@@ -36,7 +36,7 @@ class RealtimeMediaStreamServer(handler: ChannelInboundHandlerAdapter) extends R
     Try(b.bind(port).sync()) match {
       case Failure(_) => whileTryPort(b, port + 1)
       case Success(value) =>
-        logger.info("start media server success on $port")
+        logger.info(s"start media server success on $port")
         value
     }
   }
