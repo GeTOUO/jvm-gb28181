@@ -16,6 +16,7 @@ import io.pkts.buffer.Buffers
 
 class GB28181RealtimeTCPSource() extends ChannelInboundHandlerAdapter with ActiveSource[PSH264Data] {
   val streamChannel = new RealtimeMediaStreamServer(this)
+  streamChannel.run()
   val sdpInfo = new AtomicReference[String]("")
 
   override def channelActive(ctx: ChannelHandlerContext): Unit = {

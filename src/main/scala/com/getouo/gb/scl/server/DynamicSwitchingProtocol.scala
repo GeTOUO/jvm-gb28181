@@ -55,8 +55,8 @@ class DynamicSwitchingProtocol extends ByteToMessageDecoder with LogSupport {
       case HttpVersion.HTTP_1_0 | HttpVersion.HTTP_1_1 =>
         switchToHttpAndWebsocket(channelHandlerContext)
       case RtspVersions.RTSP_1_0 => switchToRtsp(channelHandlerContext)
-//      case SipVersions.SIP_2_0 => switchSipModel(pipeline)
-      case SipVersions.SIP_2_0 => switchSipModel2(pipeline)
+      case SipVersions.SIP_2_0 => switchSipModel(pipeline)
+//      case SipVersions.SIP_2_0 => switchSipModel2(pipeline)
       case unSupportProtocol =>
         channelHandlerContext.close()
         throw new ProtocolUnSupportException(unSupportProtocol.text())
