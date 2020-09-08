@@ -65,9 +65,9 @@ class GBStreamPublisher extends ChannelInboundHandlerAdapter with Runnable with 
       throw new IllegalArgumentException(s"不可用端口: $port")
     }
     Try(b.bind(port).sync()) match {
-      case Failure(_) => whileTryPort(b, port + 1)
+      case Failure(_) => whileTryPort(b, port + 2)
       case Success(value) =>
-        logger.info("start media server success on $port")
+        logger.info(s"start media publisher success on $port")
         value
     }
   }

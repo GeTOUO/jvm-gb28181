@@ -2,7 +2,7 @@ package com.getouo.gb.scl.server.handler
 
 import com.getouo.gb.scl.data.ISourceData
 import com.getouo.gb.scl.io.{H264FileSource, Source}
-import com.getouo.gb.scl.model.{RtspSetupRequest, RtspSetupResponse}
+import com.getouo.gb.scl.model.{GBDevice, RtspSetupRequest, RtspSetupResponse}
 import com.getouo.gb.scl.rtp.H264RtpConsumer
 import com.getouo.gb.scl.server.{GBStreamPublisher, UdpPusher}
 import com.getouo.gb.scl.service.DeviceService
@@ -74,8 +74,8 @@ class RtspSetupHandler extends SimpleChannelInboundHandler[RtspSetupRequest] wit
 
   private def gbSourceConsumer(channel: Channel, gid: GBSourceId): (GB28181PlayStream, GBStreamPublisher) = {
     val deviceService = SpringContextUtil.getBean(clazz = classOf[DeviceService]).getOrElse(throw new Exception(s"无法取得 deviceService"))
-    val ps: GB28181PlayStream = deviceService.getPlayStream(gid)
-    (ps, deviceService.getGBPublisher(ps))
+    val ps: GB28181PlayStream = GBDevice.getPlayStream(gid)
+    (ps, GBDevice.getGBPublisher(ps))
   }
 
 }

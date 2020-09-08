@@ -1,6 +1,7 @@
 package com.getouo.gb.scl.rtsp
 
 import com.getouo.gb.scl.io.H264FileSource
+import com.getouo.gb.scl.model.GBDevice
 import com.getouo.gb.scl.rtp.H264RtpConsumer
 import com.getouo.gb.scl.server.UdpPusher
 import com.getouo.gb.scl.service.DeviceService
@@ -56,8 +57,8 @@ class SetupExecutor(val channel: Channel, val request: FullHttpRequest) extends 
         rtpSession.copy(playStreamOpt = Some(stream), consumerOpt = Some(consumer))
       case gid@GBSourceId(deviceId, channelId, setupTime) =>
         val deviceService = SpringContextUtil.getBean(clazz = classOf[DeviceService]).getOrElse(throw new Exception(s"无法取得 deviceService"))
-        val ps = deviceService.getPlayStream(gid)
-        val publisher = deviceService.getGBPublisher(ps)
+        val ps = GBDevice.getPlayStream(gid)
+        val publisher = GBDevice.getGBPublisher(ps)
         rtpSession.copy(playStreamOpt = Some(ps), consumerOpt = Some(publisher))
       case _ => rtpSession
     }

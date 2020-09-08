@@ -10,25 +10,28 @@ import io.netty.util.concurrent.GlobalEventExecutor
 
 import scala.jdk.CollectionConverters._
 
+
+
 object ChannelGroups {
 
   private def createGroup(): ChannelGroup = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE)
 
   private val DEFAULT_GROUP_NAME = "DEFAULT_CHANNEL_GROUP"
+
+  val SIP_UDP_POINT = "SIP_UDP_POINT"
+
   private val defaultGroup: ChannelGroup = createGroup()
 
-  private val channelGroups: ConcurrentHashMap[String, ChannelGroup] = new ConcurrentHashMap[String, ChannelGroup]()
+  private val jChannelGroups: ConcurrentHashMap[String, ChannelGroup] = new ConcurrentHashMap[String, ChannelGroup]()
+  private val channelGroups: scala.collection.concurrent.Map[String, ChannelGroup] = jChannelGroups.asScala
   channelGroups.put(DEFAULT_GROUP_NAME, defaultGroup)
 
   def addChannel(channel: Channel): Unit = defaultGroup.add(channel)
 
-  def addChannel(channel: Channel, group: String): Unit = {
-    addChannel(channel)
-    if (group != DEFAULT_GROUP_NAME)
-      channelGroups.computeIfAbsent(group, _ => createGroup()).add(channel)
-  }
+  def addChannel(channel: Channel, group: String): Unit = channelGroups.getOrElseUpdate(group, createGroup()).add(channel)
 
   def find(channelId: ChannelId): Option[Channel] = Option.apply(defaultGroup.find(channelId))
+  def find(channelId: ChannelId, group: String): Option[Channel] = channelGroups.get(group).flatMap(g => Option.apply(g.find(channelId)))
 
   def filter(p: Channel => Boolean = _ => true): Set[Channel] = {
     val channels: util.Set[Channel] = defaultGroup.stream().filter(channel => p.apply(channel)).collect(Collectors.toSet[Channel])

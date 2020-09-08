@@ -2,7 +2,7 @@ package com.getouo.gb.scl.sip
 
 import com.getouo.gb.scl.stream.{GB28181PlayStream, GBSourceId}
 import com.getouo.gb.scl.util.LogSupport
-import com.getouo.sip.{DefaultSipRequest, FullSipResponse, SipHeaderNames, SipMethod, SipResponseStatus, SipVersion}
+import com.getouo.sip._
 import io.netty.channel.{ChannelHandlerContext, SimpleChannelInboundHandler}
 
 class SipResponseDispatcher extends SimpleChannelInboundHandler[FullSipResponse] with LogSupport {

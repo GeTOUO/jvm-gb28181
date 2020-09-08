@@ -1,5 +1,7 @@
 package com.getouo.gb.scl.server.handler
 
+import java.net.InetSocketAddress
+
 import com.getouo.gb.scl.model.GBDevice
 import com.getouo.gb.scl.service.DeviceService
 import com.getouo.gb.scl.sip.SipMessageTemplate
@@ -99,12 +101,10 @@ class ProxyHandler extends SimpleChannelInboundHandler[SipMessageEvent] with Log
 
           if (cmdOpt.exists(_.text == "Keepalive") && deviceIdOpt.isDefined) {
             val deviceId = deviceIdOpt.map(_.text).get
-            service.keepalive(deviceId, oldOpt => {
-              oldOpt.map(_.copy(tcpOpt = if (connection.isTCP) Some(channel.id()) else None, udpAddrOpt = udpOpt))
-                .getOrElse(GBDevice(deviceId, if (connection.isTCP) Some(channel.id()) else None, udpOpt))
-            })
-            val response = req.createResponse(200)
-            event.getConnection.send(response)
+//            service.keepalive(deviceId, channel, connection.getRemoteAddress)
+//            service.keepalive(deviceId, channel, connection.getRemoteAddress)
+//            val response = req.createResponse(200)
+//            event.getConnection.send(response)
           } else {
             logger.info(
               s"""

@@ -2,29 +2,115 @@ package com.getouo.gb.scl.model
 
 import java.net.InetSocketAddress
 
-import com.getouo.gb.scl.server.HybridProtocolInstructionServer
+import com.getouo.gb.scl.io.GB28181RealtimeTCPSource
+import com.getouo.gb.scl.server.GBStreamPublisher
 import com.getouo.gb.scl.sip.ChannelGroups
-import com.getouo.sip.{DefaultFullSipRequest, FullSipRequest, SipMethod, SipRequest, SipVersion}
-import io.netty.channel.ChannelId
-import io.sipstack.netty.codec.sip.{Connection, TcpConnection, UdpConnection}
+import com.getouo.gb.scl.stream.{GB28181ConsumptionPipeline, GB28181PlayStream, GBSourceId}
+import com.getouo.gb.scl.util.{ChannelUtil, NetAddressUtil}
+import com.getouo.sip._
+import io.netty.buffer.{ByteBuf, Unpooled}
+import io.netty.channel.{Channel, ChannelId}
+import io.netty.util.CharsetUtil
+import io.netty.util.concurrent.Future
 
-case class GBDevice(id: String, ip: String, port: Int, tcpOpt: Option[ChannelId], udpAddrOpt: Option[(String, Int)]) {
+import scala.util.{Failure, Success, Try}
 
-  def sipConnection(): Option[Connection] =
-    udpAddrOpt match {
-      case Some((str, i)) => Some(new UdpConnection(HybridProtocolInstructionServer.getSipUdpSender(5060), new InetSocketAddress(str, i)))
-      case None => tcpOpt.flatMap(ChannelGroups.find).map(channel =>
-        new TcpConnection(channel, channel.remoteAddress.asInstanceOf[InetSocketAddress]))
+case class SipConnection(isUdp: Boolean, channelId: ChannelId)
+
+case class GBDevice(id: String, recipientAddress: InetSocketAddress, connection: SipConnection) {
+
+  val ip: String = recipientAddress.getAddress.getHostAddress
+  val port: Int = recipientAddress.getPort
+
+  def channelOpt: Option[Channel] = if (connection.isUdp) {
+    ChannelGroups.find(connection.channelId, ChannelGroups.SIP_UDP_POINT)
+  } else ChannelGroups.find(connection.channelId)
+
+  def play(serverId: String): String = {
+    channelOpt match {
+      case None => "设备未连接"
+      case Some(channel) =>
+        Try {
+
+          val localIp = NetAddressUtil.localAddress.getHostAddress
+          val sourceId = GBSourceId(id, id)
+          val ps: GB28181PlayStream = GBDevice.getPlayStream(sourceId)
+          val consumer: GBStreamPublisher = GBDevice.getGBPublisher(ps)
+          val localPort = ChannelUtil.castSocketAddr(channel.localAddress()).getPort
+          val playMessage = this.inviteMessage(localIp, localPort, ps.source.streamChannel.localPort, serverId, connection.isUdp)
+
+          System.err.println(
+            s"""
+               |-------playMessage
+               |$playMessage""".stripMargin)
+          channel.writeAndFlush(playMessage)
+          s"rtsp://$localIp:${consumer.localPort}"
+        } match {
+          case Failure(exception) =>exception.printStackTrace(); exception.getMessage
+          case Success(value) =>value
+        }
     }
+  }
 
-  def inviteMessage(serverIp: String, serverPort: Int, serverId: String): FullSipRequest = {
+  def keepalive(req: FullSipRequest): Unit = {
+    val response = req.createResponse(SipResponseStatus.OK)
+    channelOpt.foreach(channel => channel.writeAndFlush(response))
 
-    val s = ""
+  }
 
-    new DefaultFullSipRequest(SipVersion.SIP_2_0, SipMethod.INVITE, s"sip:$id@$ip:$port")
+  def inviteMessage(serverIp: String, serverPort: Int, serverMediaPort: Int, serverId: String, sipIsUdp: Boolean): FullSipRequest = {
+    // m=video $serverMediaPort TCP/RTP/AVP 96 98 97
+    val sdp =
+      s"""v=0\r\no=- 0 0 IN IP4 $ip
+         |s=Play
+         |c=IN IP4 $serverIp
+         |t=0 0
+         |m=video $serverMediaPort RTP/AVP 96 98 97
+         |a=sendrecv
+         |a=rtpmap:96 PS/90000
+         |a=rtpmap:98 H264/90000
+         |a=rtpmap:97 MPEG4/90000
+         |a=setup:passive
+         |a=connection:new""".stripMargin
+
+    val transportProtocol = if (sipIsUdp) "SIP/2.0/UDP" else "SIP/2.0/TCP"
+
+    val bytes = sdp.getBytes(CharsetUtil.UTF_8)
+    val buf = Unpooled.wrappedBuffer(bytes)
+//    val buf = Unpooled.copiedBuffer(sdp, CharsetUtil.UTF_8)
+
+//    val body = Unpooled.copiedBuffer(sdp, CharsetUtil.UTF_8)
+    val request = new DefaultFullSipRequest(SipVersion.SIP_2_0, SipMethod.INVITE, s"sip:$id@$ip:$port", buf)
+
+//    val request = new DefaultFullSipRequest(SipVersion.SIP_2_0, SipMethod.INVITE, s"sip:$id@$ip:$port")
+//    request.content().writeBytes(buf)
+//    buf.release()
+    val headers = request.headers()
+
+    headers.set(SipHeaderNames.CALL_ID, s"$id@0.0.0.0")
+    headers.set(SipHeaderNames.CSEQ, s"1 ${SipMethod.INVITE.name()}")
+    headers.set(SipHeaderNames.FROM, s"<sip:$serverId@${serverId.take(10)}>;tag=$id")
+    headers.set(SipHeaderNames.TO, s"<sip:$id@${id.take(10)}>")
+    headers.set(SipHeaderNames.VIA, s"$transportProtocol $ip:$port;rport")
+    headers.set(SipHeaderNames.MAX_FORWARDS, 70)
+//    headers.set(SipHeaderNames.CONTACT, s"<sip:$id@$serverIp:$serverPort>")
+    headers.set(SipHeaderNames.CONTACT, s"<sip:$id@$ip:$port>")
+    headers.set(SipHeaderNames.CONTENT_TYPE, s"Application/SDP")
+    headers.set(SipHeaderNames.CONTENT_LENGTH, request.content().readableBytes())
+    request.setRecipient(recipientAddress)
+    request
   }
 }
 
-//object GBDevice {
-//  private val udpServer: SipUdpServer = SpringContextUtil.getBean(clazz = classOf[SipUdpServer]).getOrElse(throw new Exception("无法加载 SipUdpServer"))
-//}
+object GBDevice {
+  def getPlayStream(sourceId: GBSourceId): GB28181PlayStream = {
+    import scala.concurrent.ExecutionContext.Implicits.global
+    GB28181PlayStream.getOrElseSubmit(sourceId, id => new GB28181PlayStream(id, new GB28181RealtimeTCPSource(), new GB28181ConsumptionPipeline))
+  }
+
+  def getGBPublisher(ps: GB28181PlayStream): GBStreamPublisher = ps.getOrElseAddConsumer(classOf[GBStreamPublisher], {
+    val publisher = new GBStreamPublisher()
+    new Thread(publisher).start()
+    publisher
+  })
+}

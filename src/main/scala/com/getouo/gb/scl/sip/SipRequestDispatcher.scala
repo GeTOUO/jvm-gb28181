@@ -2,11 +2,9 @@ package com.getouo.gb.scl.sip
 
 import java.nio.charset.Charset
 
-import com.getouo.gb.scl.model.GBDevice
 import com.getouo.gb.scl.service.DeviceService
 import com.getouo.gb.scl.util.{LogSupport, SpringContextUtil}
 import com.getouo.sip.{FullSipRequest, SipHeaderNames, SipMethod, SipResponseStatus}
-import io.netty.channel.socket.nio.NioDatagramChannel
 import io.netty.channel.{Channel, ChannelHandlerContext, SimpleChannelInboundHandler}
 import org.apache.commons.codec.digest.DigestUtils
 
@@ -14,7 +12,7 @@ import scala.util.{Failure, Success, Try}
 import scala.xml.{Node, XML}
 
 class SipRequestDispatcher extends SimpleChannelInboundHandler[FullSipRequest] with LogSupport {
-//class SipRequestDispatcher extends SimpleChannelInboundHandler[DefaultSipRequest] with LogSupport {
+  //class SipRequestDispatcher extends SimpleChannelInboundHandler[DefaultSipRequest] with LogSupport {
   override def channelRead0(ctx: ChannelHandlerContext, msg: FullSipRequest): Unit = {
     val channel = ctx.channel()
 
@@ -48,29 +46,15 @@ class SipRequestDispatcher extends SimpleChannelInboundHandler[FullSipRequest] w
         val deviceIdOpt: Option[Node] = (xml \ "DeviceID").headOption
         val service = SpringContextUtil.getBean(clazz = classOf[DeviceService]).getOrElse(throw new RuntimeException("获取不到redis服务"))
 
-//        val connection = event.getConnection
-//        val udpOpt = if (connection.isUDP) {
-//          val udpConn = connection.asInstanceOf[UdpConnection]
-//          Some((udpConn.getRemoteIpAddress, udpConn.getRemotePort))
-//        } else None
+        //        val connection = event.getConnection
+        //        val udpOpt = if (connection.isUDP) {
+        //          val udpConn = connection.asInstanceOf[UdpConnection]
+        //          Some((udpConn.getRemoteIpAddress, udpConn.getRemotePort))
+        //        } else None
 
         if (cmdOpt.exists(_.text == "Keepalive") && deviceIdOpt.isDefined) {
           val deviceId = deviceIdOpt.map(_.text).get
-          service.keepalive(deviceId, oldOpt => {
-
-            val isUdp = channel.isInstanceOf[NioDatagramChannel]
-            val udpOpt = if(isUdp) Some(req.recipient().getAddress.getHostAddress, req.recipient().getPort) else None
-            if (!isUdp) ChannelGroups.addChannel(channel)
-
-            if (!isUdp) {
-              ChannelGroups.addChannel(channel)
-            }
-
-            oldOpt.map(_.copy(tcpOpt = if (!isUdp) Some(channel.id()) else None, udpAddrOpt = udpOpt))
-              .getOrElse(GBDevice(deviceId, if (!isUdp) Some(channel.id()) else None, udpOpt))
-          })
-          val response = req.createResponse(SipResponseStatus.OK)
-          channel.writeAndFlush(response)
+          service.keepalive(deviceId, channel, req)
         } else {
           logger.info(
             s"""

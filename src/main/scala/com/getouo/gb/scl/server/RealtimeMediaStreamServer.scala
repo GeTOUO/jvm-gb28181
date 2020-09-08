@@ -34,7 +34,7 @@ class RealtimeMediaStreamServer(handler: ChannelInboundHandlerAdapter) extends R
       throw new IllegalArgumentException(s"不可用端口: $port")
     }
     Try(b.bind(port).sync()) match {
-      case Failure(_) => whileTryPort(b, port + 1)
+      case Failure(_) => whileTryPort(b, port + 2)
       case Success(value) =>
         logger.info(s"start media server success on $port")
         value
