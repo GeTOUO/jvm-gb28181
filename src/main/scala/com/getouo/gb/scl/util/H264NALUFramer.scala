@@ -75,7 +75,7 @@ object H264NALUFramer {
   private def nextSliceStartTagInfo(buf: Array[Byte], startIndex: Int = 0, allowSlice: Boolean = true): Option[(Int, Int)] = {
     val t3i = buf.indexOfSlice(START_TAG3, startIndex)
     if (t3i == -1) None else {
-      if ((buf(t3i + 2) & 0x80) == 0x80 || allowSlice) {
+      if ((buf(t3i + 4) & 0x80) == 0x80 || allowSlice) {
         val t4i = t3i - 1
         if (t4i >= 0 && buf(t4i) == 0) {
           Some(4, t4i)
