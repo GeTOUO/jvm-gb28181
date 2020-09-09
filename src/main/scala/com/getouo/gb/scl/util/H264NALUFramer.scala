@@ -101,7 +101,7 @@ object H264NALUFramer {
     //        Some(StepInfo(H264NaluData.of(0, buf.take(t4i)), 4, buf.drop(t4i + 4)))
     //      } else Some(StepInfo(H264NaluData.of(0, buf.take(t3i)), 3, buf.drop(t3i + 3)))
     //    } else None
-    result.filter(s => !allowSlice && (s.leftover(1) & 0x80) != 0x80).foreach(s => System.err.println(s"& 0x80) != 0x80 ${s.leftover(1) & 0x80}"))
+    result.filter(s => !allowSlice && (s.leftover(1) & 0x80) == 0x80).foreach(s => System.err.println(s"& 0x80) == 0x80 ${s.leftover(1) & 0x80}"))
     result
     //
     //    val i4i = buf.indexOfSlice(START_TAG4)
@@ -115,11 +115,11 @@ object H264NALUFramer {
     //    }
   }
 
-  def nextUnit(buf: Array[Byte], tags: Array[Array[Byte]]): Option[StepInfo] = {
-    tags.collectFirst { case tag if buf.indexOfSlice(tag) != -1 =>
-      val tagIndex = buf.indexOfSlice(tag)
-      StepInfo(H264NaluData.of(0, buf.take(tagIndex)), tag.length, buf.drop(tagIndex + tag.length))
-    }
-  }
+//  def nextUnit(buf: Array[Byte], tags: Array[Array[Byte]]): Option[StepInfo] = {
+//    tags.collectFirst { case tag if buf.indexOfSlice(tag) != -1 =>
+//      val tagIndex = buf.indexOfSlice(tag)
+//      StepInfo(H264NaluData.of(0, buf.take(tagIndex)), tag.length, buf.drop(tagIndex + tag.length))
+//    }
+//  }
 
 }

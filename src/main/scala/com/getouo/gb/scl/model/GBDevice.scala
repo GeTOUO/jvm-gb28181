@@ -59,19 +59,23 @@ case class GBDevice(id: String, recipientAddress: InetSocketAddress, connection:
   }
 
   def inviteMessage(serverIp: String, serverPort: Int, serverMediaPort: Int, serverId: String, sipIsUdp: Boolean): FullSipRequest = {
+    val tcpSsrc = s"0${serverId.substring(3, 8)}0000"
     // m=video $serverMediaPort TCP/RTP/AVP 96 98 97
     val sdp =
-      s"""v=0\r\no=- 0 0 IN IP4 $ip
+      s"""v=0
+         |o=- 0 0 IN IP4 $serverIp
          |s=Play
          |c=IN IP4 $serverIp
          |t=0 0
-         |m=video $serverMediaPort RTP/AVP 96 98 97
+         |m=video $serverMediaPort TCP/RTP/AVP 96 98 97
          |a=sendrecv
          |a=rtpmap:96 PS/90000
          |a=rtpmap:98 H264/90000
          |a=rtpmap:97 MPEG4/90000
          |a=setup:passive
-         |a=connection:new""".stripMargin
+         |a=connection:new
+         |y=$tcpSsrc
+         |f=""".stripMargin
 
     val transportProtocol = if (sipIsUdp) "SIP/2.0/UDP" else "SIP/2.0/TCP"
 
@@ -87,14 +91,14 @@ case class GBDevice(id: String, recipientAddress: InetSocketAddress, connection:
 //    buf.release()
     val headers = request.headers()
 
-    headers.set(SipHeaderNames.CALL_ID, s"$id@0.0.0.0")
+    headers.set(SipHeaderNames.CALL_ID, s"$id@$serverIp")
     headers.set(SipHeaderNames.CSEQ, s"1 ${SipMethod.INVITE.name()}")
     headers.set(SipHeaderNames.FROM, s"<sip:$serverId@${serverId.take(10)}>;tag=$id")
     headers.set(SipHeaderNames.TO, s"<sip:$id@${id.take(10)}>")
     headers.set(SipHeaderNames.VIA, s"$transportProtocol $ip:$port;rport")
+    headers.set(SipHeaderNames.CONTACT, s"<sip:$id@$serverIp:$serverPort>")
+//    headers.set(SipHeaderNames.CONTACT, s"<sip:$id@$ip:$port>")
     headers.set(SipHeaderNames.MAX_FORWARDS, 70)
-//    headers.set(SipHeaderNames.CONTACT, s"<sip:$id@$serverIp:$serverPort>")
-    headers.set(SipHeaderNames.CONTACT, s"<sip:$id@$ip:$port>")
     headers.set(SipHeaderNames.CONTENT_TYPE, s"Application/SDP")
     headers.set(SipHeaderNames.CONTENT_LENGTH, request.content().readableBytes())
     request.setRecipient(recipientAddress)

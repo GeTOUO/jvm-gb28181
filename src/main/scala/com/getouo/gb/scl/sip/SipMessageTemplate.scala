@@ -59,7 +59,6 @@ object SipMessageTemplate {
          |a=rtpmap:97 MPEG4/90000
          |a=setup:passive
          |a=connection:new
-         |y=$tcpSsrc
          |
          |""".stripMargin
 

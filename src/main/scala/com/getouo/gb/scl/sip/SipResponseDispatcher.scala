@@ -40,4 +40,9 @@ class SipResponseDispatcher extends SimpleChannelInboundHandler[FullSipResponse]
       ctx.channel().writeAndFlush(ack)
     }
   }
+
+  override def exceptionCaught(ctx: ChannelHandlerContext, cause: Throwable): Unit = {
+    cause.printStackTrace()
+    logger.error(s"err: ${cause.getMessage}")
+  }
 }
