@@ -8,4 +8,11 @@ class DeviceController(devices: DeviceService) {
 
   @RequestMapping(value = Array("/play"))
   def play(id: String): String = devices.play(id)
+
+  def stop(id: String): String = {
+    "stop: " + (devices.findDevice(id) match {
+      case Some(device) => true
+      case None =>false
+    })
+  }
 }
