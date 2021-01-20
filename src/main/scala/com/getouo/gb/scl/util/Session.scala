@@ -1,7 +1,7 @@
 package com.getouo.gb.scl.util
 
 import com.getouo.gb.scl.stream.{PlayStream, SourceConsumer, SourceId}
-import com.getouo.gb.scl.util.ConstVal.{RtpTransport, UnknownTransport, UnknownTransport$}
+import com.getouo.gb.scl.util.ConstVal.{RtpTransport, UnknownTransport}
 import io.netty.channel.Channel
 import io.netty.util.AttributeKey
 
